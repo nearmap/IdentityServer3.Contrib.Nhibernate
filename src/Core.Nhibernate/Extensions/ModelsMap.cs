@@ -25,9 +25,11 @@ namespace IdentityServer3.Core.Models
 
                 config.CreateMap<Models.ScopeClaim, Contrib.Nhibernate.Entities.ScopeClaim>(MemberList.Source);
 
-                config.CreateMap<Models.Secret, ScopeSecret>(MemberList.Source);
+                config.CreateMap<Models.Secret, ScopeSecret>(MemberList.Source)
+                    .ForMember(x => x.Expiration, opts => opts.MapFrom(src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
 
-                config.CreateMap<Models.Secret, ClientSecret>(MemberList.Source);
+                config.CreateMap<Models.Secret, ClientSecret>(MemberList.Source)
+                    .ForMember(x => x.Expiration, opts => opts.MapFrom(src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
 
                 config.CreateMap<Models.Client, Contrib.Nhibernate.Entities.Client>(MemberList.Source)
                     .ForMember(x => x.UpdateAccessTokenOnRefresh,

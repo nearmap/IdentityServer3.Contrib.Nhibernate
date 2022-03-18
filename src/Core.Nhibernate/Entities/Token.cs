@@ -7,7 +7,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Entities
     {
         public virtual string Key { get; set; }
 
-        public virtual DateTimeOffset Expiry { get; set; }
+        public virtual DateTime Expiry { get; set; }
 
         public virtual string JsonCode { get; set; }
 

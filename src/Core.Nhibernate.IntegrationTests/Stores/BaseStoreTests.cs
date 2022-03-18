@@ -31,6 +31,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
+using FluentNHibernate.Conventions;
+using FluentNHibernate.Conventions.AcceptanceCriteria;
+using FluentNHibernate.Conventions.Inspections;
+using FluentNHibernate.Conventions.Instances;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Serialization;
 using IdentityServer3.Core.Models;
@@ -38,7 +42,10 @@ using IdentityServer3.Core.Services;
 using Moq;
 using Newtonsoft.Json;
 using NHibernate;
+using NHibernate.Dialect;
+using NHibernate.Driver;
 using NHibernate.Tool.hbm2ddl;
+using NHibernate.Type;
 using Configuration = NHibernate.Cfg.Configuration;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
@@ -55,7 +62,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected BaseStoreTests()
         {
-            //HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
             NhSessionFactory = GetNHibernateSessionFactory();
 
             _nhibernateAuxSession = NhSessionFactory.OpenSession();
@@ -67,7 +73,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
 
             var sessionFactory = Fluently.Configure()
-                .Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
+                .Database(PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
+                //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
                     .ShowSql()
                     .FormatSql()
                     .AdoNetBatchSize(20)
@@ -75,6 +82,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 .Mappings(
                     m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true))
                 )
+                .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
                     SchemaMetadataUpdater.QuoteTableAndColumns(cfg);
@@ -144,6 +152,46 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     return Task.FromResult(
                         scopeNames.Select(s => new Scope { Name = s, DisplayName = s }));
                 });
+        }
+    }
+
+    public class PostgreSQLConfiguration :
+        PersistenceConfiguration<PostgreSQLConfiguration, PostgreSQLConnectionStringBuilder>
+    {
+        public PostgreSQLConfiguration()
+        {
+            Driver<NpgsqlDriver>();
+        }
+
+        public static PostgreSQLConfiguration PostgresSQL93
+            => new PostgreSQLConfiguration().Dialect<PostgresSQL93Dialect>();
+    }
+
+    public class PostgresSQL93Dialect : PostgreSQL82Dialect
+    {
+        public PostgresSQL93Dialect()
+        {
+            RegisterColumnType(DbType.DateTimeOffset, "timestamp with time zone");
+        }
+    }
+
+    /// <summary>
+    /// NHibernate loses milliseconds precision when mapping with <see cref="DateTime"/>
+    /// Use "NHibernate.Type.TimeStampType" by default when mapping from <see cref="DateTime"/>
+    /// Credit: http://stackoverflow.com/a/10085574
+    /// </summary>
+    public class TimeStampConvention : IPropertyConvention, IPropertyConventionAcceptance
+    {
+        public void Apply(IPropertyInstance instance)
+        {
+            instance.CustomType<DateTimeType>();
+        }
+
+        public void Accept(IAcceptanceCriteria<IPropertyInspector> criteria)
+        {
+            criteria.Expect(p =>
+                p.Type == typeof(DateTime) ||
+                p.Type == typeof(DateTime?));
         }
     }
 }

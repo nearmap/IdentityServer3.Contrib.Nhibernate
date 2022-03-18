@@ -75,7 +75,7 @@ namespace Core.Nhibernate.IntegrationTests
         {
             var tokenBuilder = AFixture.Build<RefreshToken>()
                 .Without(rt => rt.Subject)
-                .With(rt => rt.CreationTime, DateTimeOffset.UtcNow)
+                .With(rt => rt.CreationTime, DateTime.UtcNow)
                 .With(rt => rt.AccessToken, GetAccessToken(subjectId, clientId));
 
             var token = tokenBuilder.Create();

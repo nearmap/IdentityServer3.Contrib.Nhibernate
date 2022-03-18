@@ -82,7 +82,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .Query<Token>()
                     .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
 
-                return (token == null || token.Expiry < DateTimeOffset.UtcNow)
+                return (token == null || token.Expiry < DateTime.UtcNow)
                     ? null
                     : ConvertFromJson(token.JsonCode);
             });
