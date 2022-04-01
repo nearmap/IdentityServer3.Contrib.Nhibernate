@@ -15,10 +15,10 @@ namespace WebHost
         public void Configuration(IAppBuilder appBuilder)
         {
             Log.Logger = new LoggerConfiguration()
-               .MinimumLevel.Debug()
-               .WriteTo.Trace()
-               .WriteTo.RollingFile(@"Log-{Date}.log")
-               .CreateLogger();
+                .MinimumLevel.Debug()
+                .WriteTo.Trace()
+                .WriteTo.File(@"Log-{Date}.log")
+                .CreateLogger();
 
             var mapper = new MapperConfiguration(cfg =>
             {
