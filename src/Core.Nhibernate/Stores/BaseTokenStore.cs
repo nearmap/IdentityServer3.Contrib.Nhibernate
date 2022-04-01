@@ -47,12 +47,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
             : base(session, mapper)
         {
-            if (scopeStore == null) throw new ArgumentNullException(nameof(scopeStore));
-            if (clientStore == null) throw new ArgumentNullException(nameof(clientStore));
-
+            ScopeStore = scopeStore ?? throw new ArgumentNullException(nameof(scopeStore));
+            ClientStore = clientStore ?? throw new ArgumentNullException(nameof(clientStore));
             TokenType = tokenType;
-            ScopeStore = scopeStore;
-            ClientStore = clientStore;
         }
 
         JsonSerializerSettings GetJsonSerializerSettings()
@@ -102,7 +99,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .ExecuteUpdate();
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
 
         public async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
@@ -136,7 +133,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .ExecuteUpdate();
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
 
         public abstract Task StoreAsync(string key, T value);

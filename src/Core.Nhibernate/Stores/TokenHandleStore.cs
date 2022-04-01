@@ -58,7 +58,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 session.Save(nhCode);
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

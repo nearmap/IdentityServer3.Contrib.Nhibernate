@@ -69,7 +69,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 session.Update(token);
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

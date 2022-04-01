@@ -18,7 +18,7 @@ namespace WebHost.Config
 {
     static class Factory
     {
-        public static IdentityServerServiceFactory Configure(string connString, IMapper mapper)
+        public static IdentityServerServiceFactory Configure(IMapper mapper)
         {
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
@@ -82,7 +82,7 @@ namespace WebHost.Config
 
                 foreach (var client in toSave)
                 {
-                    var result = nhSession.Save(client);
+                    nhSession.Save(client);
                 }
 
                 tx.Commit();
@@ -102,7 +102,7 @@ namespace WebHost.Config
 
                 foreach (var scope in toSave)
                 {
-                    var result = nhSession.Save(scope);
+                    nhSession.Save(scope);
                 }
 
                 tx.Commit();

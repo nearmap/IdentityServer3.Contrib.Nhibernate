@@ -96,7 +96,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 }
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
 
         public async Task<IEnumerable<IdentityServer3.Core.Models.Consent>> LoadAllAsync(string subject)
@@ -155,7 +155,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .ExecuteUpdate();
             });
 
-            await TaskExtensions.CompletedTask;
+            await Task.CompletedTask;
         }
     }
 }

@@ -31,7 +31,7 @@ namespace WebHost
                 {
                     SiteName = "IdentityServer3 (Nhibernate)",
                     SigningCertificate = Certificate.Get(),
-                    Factory = Factory.Configure("IdSvr3Config", mapper)
+                    Factory = Factory.Configure(mapper)
                 };
 
                 core.UseIdentityServer(options);

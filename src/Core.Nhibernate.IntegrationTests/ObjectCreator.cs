@@ -35,7 +35,7 @@ using Consent = IdentityServer3.Contrib.Nhibernate.Entities.Consent;
 
 namespace Core.Nhibernate.IntegrationTests
 {
-    public class ObjectCreator
+    public static class ObjectCreator
     {
         private static readonly IFixture AFixture = new Fixture()
             .Customize(new AutoMoqCustomization());
