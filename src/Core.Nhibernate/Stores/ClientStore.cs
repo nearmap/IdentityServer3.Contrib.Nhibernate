@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,17 +25,17 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ClientStore : NhibernateStore, IClientStore
     {
-        public ClientStore(ISession session)
-            : base(session)
+        public ClientStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
@@ -46,7 +47,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .Query<Client>()
                     .SingleOrDefault(c => c.ClientId == clientId);
 
-                return clientEntity?.ToModel();
+                return _mapper.Map<Core.Models.Client>(clientEntity);
             });
 
             return await Task.FromResult(client);

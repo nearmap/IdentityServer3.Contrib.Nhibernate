@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -23,20 +24,25 @@
 
 
 
-using System.Data;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
-using NHibernate;
 using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ClientStoreTests : BaseStoreTests
     {
+        private readonly IMapper _mapper;
 
         public ClientStoreTests()
         {
+            _mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<EntitiesProfile>();
+            })
+                .CreateMapper();
         }
 
         [Fact]
@@ -45,13 +51,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var clientIdToFind = "ClientIdToFind";
 
             //Arrange
-            var sut = new ClientStore(NhibernateSession);
-            var testClient1Entity = ObjectCreator.GetClient().ToEntity();
-            var testClient2Entity = ObjectCreator.GetClient().ToEntity();
-            var testClient3Entity = ObjectCreator.GetClient().ToEntity();
+            var sut = new ClientStore(NhibernateSession, _mapper);
+            var testClient1Entity = ObjectCreator.GetClient().ToEntity(_mapper);
+            var testClient2Entity = ObjectCreator.GetClient().ToEntity(_mapper);
+            var testClient3Entity = ObjectCreator.GetClient().ToEntity(_mapper);
 
             var testClientToFind = ObjectCreator.GetClient(clientIdToFind);
-            var testClientToFindEntity = testClientToFind.ToEntity();
+            var testClientToFindEntity = testClientToFind.ToEntity(_mapper);
 
             ExecuteInTransaction(session =>
             {

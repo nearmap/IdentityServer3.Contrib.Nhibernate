@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +25,11 @@
 
 
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
-using Moq;
-using NHibernate;
-using NHibernate.Linq;
 using Xunit;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 
@@ -43,16 +37,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class AuthorizationCodeStoreTests : BaseStoreTests
     {
+        private readonly IAuthorizationCodeStore sut;
+
         public AuthorizationCodeStoreTests()
         {
+            sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
         }
 
         [Fact]
         public async Task StoreAsync()
         {
             //Arrange
-            var sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-
             var testKey = Guid.NewGuid().ToString();
             var testCode = ObjectCreator.GetAuthorizationCode();
 
@@ -64,7 +59,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 //Assert
                 var token = session.Query<Token>()
                     .SingleOrDefault(t => t.TokenType == TokenType.AuthorizationCode &&
-                                          t.Key == testKey);
+                    t.Key == testKey);
 
                 Assert.NotNull(token);
 
@@ -79,7 +74,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAsync()
         {
             //Arrange
-            var sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
             var testKey = Guid.NewGuid().ToString();
             var testCode = ObjectCreator.GetAuthorizationCode();
 
@@ -119,7 +113,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task RemoveAsync()
         {
             //Arrange
-            var sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
             var testKey = Guid.NewGuid().ToString();
             var testCode = ObjectCreator.GetAuthorizationCode();
 
@@ -145,8 +138,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             ExecuteInTransaction(session =>
             {
                 var token = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.AuthorizationCode &&
-                                          t.Key == testKey);
+                    .SingleOrDefault(t => 
+                    t.TokenType == TokenType.AuthorizationCode &&
+                    t.Key == testKey);
 
                 Assert.Null(token);
 
@@ -157,7 +151,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
-            var sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
             var subjectId1 = Guid.NewGuid().ToString();
             var subjectId2 = Guid.NewGuid().ToString();
 
@@ -241,7 +234,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task RevokeAsync()
         {
             //Arrange
-            var sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
             var subjectIdToRevoke = Guid.NewGuid().ToString();
             var clientIdToRevoke = Guid.NewGuid().ToString();
 
@@ -285,12 +277,14 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 //Assert
                 var tokenRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.AuthorizationCode &&
-                                          t.Key == testKeyToRevoke);
+                    .SingleOrDefault(t => 
+                    t.TokenType == TokenType.AuthorizationCode &&
+                    t.Key == testKeyToRevoke);
 
                 var tokenNotRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.AuthorizationCode &&
-                                          t.Key == testKey);
+                    .SingleOrDefault(t => 
+                    t.TokenType == TokenType.AuthorizationCode &&
+                    t.Key == testKey);
 
                 Assert.Null(tokenRevoked);
                 Assert.NotNull(tokenNotRevoked);

@@ -1,21 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core.Nhibernate;
-using FluentNHibernate.Automapping;
+using AutoMapper;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
-using FluentNHibernate.Conventions.Helpers;
-using FluentNHibernate.Data;
 using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
 using IdentityServer3.Core.Models;
 using NHibernate;
-using NHibernate.Linq;
 using NHibernate.Tool.hbm2ddl;
 using Client = IdentityServer3.Core.Models.Client;
 using Configuration = NHibernate.Cfg.Configuration;
@@ -23,9 +16,9 @@ using Scope = IdentityServer3.Core.Models.Scope;
 
 namespace WebHost.Config
 {
-    class Factory
+    static class Factory
     {
-        public static IdentityServerServiceFactory Configure(string connString)
+        public static IdentityServerServiceFactory Configure(string connString, IMapper mapper)
         {
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
@@ -35,8 +28,8 @@ namespace WebHost.Config
             cleanup.Start();
 
             // these two calls just pre-populate the test DB from the in-memory config
-            ConfigureClients(Clients.Get(), nhSession);
-            ConfigureScopes(Scopes.Get(), nhSession);
+            ConfigureClients(Clients.Get(), nhSession, mapper);
+            ConfigureScopes(Scopes.Get(), nhSession, mapper);
 
             var factory = new IdentityServerServiceFactory();
 
@@ -77,7 +70,7 @@ namespace WebHost.Config
             new SchemaUpdate(cfg).Execute(false, true);
         }
 
-        public static void ConfigureClients(ICollection<Client> clients, ISession nhSession)
+        public static void ConfigureClients(ICollection<Client> clients, ISession nhSession, IMapper mapper)
         {
             using (var tx = nhSession.BeginTransaction())
             {
@@ -85,7 +78,7 @@ namespace WebHost.Config
 
                 if (clientsInDb.Any()) return;
 
-                var toSave = clients.Select(c => c.ToEntity()).ToList();
+                var toSave = clients.Select(c => c.ToEntity(mapper)).ToList();
 
                 foreach (var client in toSave)
                 {
@@ -97,7 +90,7 @@ namespace WebHost.Config
 
         }
 
-        public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession)
+        public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession, IMapper mapper)
         {
             using (var tx = nhSession.BeginTransaction())
             {
@@ -105,7 +98,7 @@ namespace WebHost.Config
 
                 if (scopesInDb.Any()) return;
 
-                var toSave = scopes.Select(s => s.ToEntity()).ToList();
+                var toSave = scopes.Select(s => s.ToEntity(mapper)).ToList();
 
                 foreach (var scope in toSave)
                 {

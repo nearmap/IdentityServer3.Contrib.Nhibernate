@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Serialization;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
 using NHibernate;
-using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
@@ -43,8 +44,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session)
+        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, mapper)
         {
             if (scopeStore == null) throw new ArgumentNullException(nameof(scopeStore));
             if (clientStore == null) throw new ArgumentNullException(nameof(clientStore));

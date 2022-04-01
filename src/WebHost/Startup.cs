@@ -1,6 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using AutoMapper;
 using IdentityServer3.Core.Configuration;
+using IdentityServer3.Core.Models;
 using Microsoft.Owin;
 using Owin;
 using Serilog;
@@ -17,8 +17,13 @@ namespace WebHost
             Log.Logger = new LoggerConfiguration()
                .MinimumLevel.Debug()
                .WriteTo.Trace()
-               .WriteTo.RollingFile(@"C:\Users\RicardoSantos\Repos\Projects\IdentityServer3.Contrib.Nhibernate\src\WebHost\log\Log-{Date}.log")
+               .WriteTo.RollingFile(@"Log-{Date}.log")
                .CreateLogger();
+
+            var mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<EntitiesProfile>();
+            }).CreateMapper();
 
             appBuilder.Map("/core", core =>
             {
@@ -26,7 +31,7 @@ namespace WebHost
                 {
                     SiteName = "IdentityServer3 (Nhibernate)",
                     SigningCertificate = Certificate.Get(),
-                    Factory = Factory.Configure("IdSvr3Config")
+                    Factory = Factory.Configure("IdSvr3Config", mapper)
                 };
 
                 core.UseIdentityServer(options);

@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +25,20 @@
 
 using System;
 using System.Data;
+using AutoMapper;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public abstract class NhibernateStore
     {
+        protected readonly IMapper _mapper;
         private readonly ISession _nhSession;
 
-        protected NhibernateStore(ISession session)
+        protected NhibernateStore(ISession session, IMapper mapper)
         {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            _nhSession = session;
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)

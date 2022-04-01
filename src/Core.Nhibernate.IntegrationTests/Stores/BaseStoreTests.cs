@@ -1,6 +1,7 @@
 /*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +30,7 @@ using System.Configuration;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
 using FluentNHibernate.Conventions;
@@ -52,6 +54,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public abstract class BaseStoreTests
     {
+        protected readonly IMapper Mapper;
         protected ISessionFactory NhSessionFactory;
 
         protected ISession NhibernateSession { get; }
@@ -62,6 +65,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected BaseStoreTests()
         {
+            Mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<EntitiesProfile>();
+            })
+                .CreateMapper();
+
             NhSessionFactory = GetNHibernateSessionFactory();
 
             _nhibernateAuxSession = NhSessionFactory.OpenSession();

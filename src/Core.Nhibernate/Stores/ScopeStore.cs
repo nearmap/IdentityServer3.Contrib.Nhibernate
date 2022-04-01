@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -25,18 +26,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Criterion;
 using NHibernate.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ScopeStore : NhibernateStore, IScopeStore
     {
-        public ScopeStore(ISession session)
-            : base(session)
+        public ScopeStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
@@ -48,14 +49,14 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
                 var filterScopeNames = scopeNames.ToArray<object>();
 
-                  if (scopeNames != null && filterScopeNames.Any())
-                  {
-                      scopes = scopes.Where(s => filterScopeNames.Contains(s.Name));
-                  }
+                if (scopeNames != null && filterScopeNames.Any())
+                {
+                    scopes = scopes.Where(s => filterScopeNames.Contains(s.Name));
+                }
 
-                  var list = scopes.ToList();
-                  return list.Select(s => s.ToModel());
-              });
+                var list = scopes.ToList();
+                return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
+            });
 
 
             return await Task.FromResult(result);
@@ -67,15 +68,14 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             {
                 var scopes = GetScopesBaseQuery(session);
 
-                  if (publicOnly)
-                  {
-                      scopes = scopes
-                           .Where(s => s.ShowInDiscoveryDocument);
-                  }
-
-                  var list = scopes.ToList();
-                  return list.Select(s => s.ToModel());
-              });
+                if (publicOnly)
+                {
+                    scopes = scopes.Where(s => s.ShowInDiscoveryDocument);
+                }
+                
+                var list = scopes.ToList();
+                return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
+            });
 
             return await Task.FromResult(result);
         }

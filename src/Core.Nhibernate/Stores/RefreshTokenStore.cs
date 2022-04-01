@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +25,19 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class RefreshTokenStore : BaseTokenStore<RefreshToken>, IRefreshTokenStore
     {
-        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session, TokenType.RefreshToken, scopeStore, clientStore)
+        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, TokenType.RefreshToken, scopeStore, clientStore, mapper)
         {
 
         }
@@ -46,8 +47,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             ExecuteInTransaction(session =>
             {
                 var token = session
-                       .Query<Token>()
-                       .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
 
                 if (token == null)
                 {

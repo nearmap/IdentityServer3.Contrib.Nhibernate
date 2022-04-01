@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -27,31 +28,37 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
-using NHibernate;
-using NHibernate.Linq;
 using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ScopeStoreTests : BaseStoreTests
     {
+        private readonly IMapper _mapper;
+
         public ScopeStoreTests()
         {
+            _mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<EntitiesProfile>();
+            })
+                .CreateMapper();
         }
 
         [Fact]
         public async Task FindScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession);
+            var sut = new ScopeStore(NhibernateSession, _mapper);
             var testScope1 = ObjectCreator.GetScope();
             var testScope2 = ObjectCreator.GetScope();
             var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity();
-            var testScope2Entity = testScope2.ToEntity();
-            var testScope3Entity = testScope3.ToEntity();
+            var testScope1Entity = testScope1.ToEntity(_mapper);
+            var testScope2Entity = testScope2.ToEntity(_mapper);
+            var testScope3Entity = testScope3.ToEntity(_mapper);
 
             ExecuteInTransaction(session =>
             {
@@ -90,13 +97,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession);
+            var sut = new ScopeStore(NhibernateSession, _mapper);
             var testScope1 = ObjectCreator.GetScope();
             var testScope2 = ObjectCreator.GetScope();
             var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity();
-            var testScope2Entity = testScope2.ToEntity();
-            var testScope3Entity = testScope3.ToEntity();
+            var testScope1Entity = testScope1.ToEntity(_mapper);
+            var testScope2Entity = testScope2.ToEntity(_mapper);
+            var testScope3Entity = testScope3.ToEntity(_mapper);
             testScope1Entity.ShowInDiscoveryDocument = true;
             testScope2Entity.ShowInDiscoveryDocument = true;
             testScope3Entity.ShowInDiscoveryDocument = false;

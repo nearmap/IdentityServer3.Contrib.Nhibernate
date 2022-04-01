@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +24,10 @@
 
 
 
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using NHibernate;
-using NHibernate.Linq;
 using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
@@ -47,7 +45,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             string clientToGet = "client1";
 
             //Arrange
-            var sut = new ConsentStore(NhibernateSession);
+            var sut = new ConsentStore(NhibernateSession, Mapper);
             var testConsent1 = ObjectCreator.GetConsent(clientToGet, subjectToGet);
             var testConsent2 = ObjectCreator.GetConsent();
             var testConsent3 = ObjectCreator.GetConsent();
@@ -82,7 +80,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             string subjectToGet = "subject1";
 
             //Arrange
-            var sut = new ConsentStore(NhibernateSession);
+            var sut = new ConsentStore(NhibernateSession, Mapper);
             var testConsent1 = ObjectCreator.GetConsent(null, subjectToGet);
             var testConsent2 = ObjectCreator.GetConsent(null, subjectToGet);
             var testConsent3 = ObjectCreator.GetConsent();
@@ -117,7 +115,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var updatedClientId = "updatedClientId";
 
             //Arrange
-            var sut = new ConsentStore(NhibernateSession);
+            var sut = new ConsentStore(NhibernateSession, Mapper);
             var testConsent1 = ObjectCreator.GetConsent();
             var testConsent2 = ObjectCreator.GetConsent();
             var testConsent3 = ObjectCreator.GetConsent();
@@ -155,7 +153,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task UpdateAsync_WithUpdatedScopes()
         {
             //Arrange
-            var sut = new ConsentStore(NhibernateSession);
+            var sut = new ConsentStore(NhibernateSession, Mapper);
             var testConsent1 = ObjectCreator.GetConsent();
             var testConsent2 = ObjectCreator.GetConsent();
             var testConsent3 = ObjectCreator.GetConsent();
@@ -192,7 +190,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task RevokeAsync()
         {
             //Arrange
-            var sut = new ConsentStore(NhibernateSession);
+            var sut = new ConsentStore(NhibernateSession, Mapper);
             var testConsent1 = ObjectCreator.GetConsent();
             var testConsent2 = ObjectCreator.GetConsent();
             var testConsent3 = ObjectCreator.GetConsent();

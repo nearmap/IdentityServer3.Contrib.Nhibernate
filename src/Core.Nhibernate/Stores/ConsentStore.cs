@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Jason F. Bridgman
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -26,37 +27,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ConsentStore : NhibernateStore, IConsentStore
     {
-        public ConsentStore(ISession session)
-            : base(session)
+        public ConsentStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
         public async Task<IdentityServer3.Core.Models.Consent> LoadAsync(string subject, string client)
         {
             var result = ExecuteInTransaction(session =>
-              {
-                  var item = session
-                             .Query<Consent>()
-                             .SingleOrDefault(c => c.Subject == subject && c.ClientId == client);
+            {
+                var item = session
+                .Query<Consent>()
+                .SingleOrDefault(c => c.Subject == subject && c.ClientId == client);
 
-                  return item == null
-                      ? null
-                      : new IdentityServer3.Core.Models.Consent
-                      {
-                          Subject = item.Subject,
-                          ClientId = item.ClientId,
-                          Scopes = ParseScopes(item.Scopes)
-                      };
-              });
+                return item == null
+                    ? null
+                    : new IdentityServer3.Core.Models.Consent
+                    {
+                        Subject = item.Subject,
+                        ClientId = item.ClientId,
+                        Scopes = ParseScopes(item.Scopes)
+                    };
+            });
 
             return await Task.FromResult(result);
         }
@@ -66,8 +67,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             ExecuteInTransaction(session =>
             {
                 var item = session
-                        .Query<Consent>()
-                        .SingleOrDefault(c => c.Subject == consent.Subject && c.ClientId == consent.ClientId);
+                .Query<Consent>()
+                .SingleOrDefault(c => c.Subject == consent.Subject && c.ClientId == consent.ClientId);
 
                 if (item == null)
                 {
@@ -101,18 +102,18 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         public async Task<IEnumerable<IdentityServer3.Core.Models.Consent>> LoadAllAsync(string subject)
         {
             var results = ExecuteInTransaction(session =>
-              {
-                  var items = session.Query<Consent>()
-                         .Where(c => c.Subject == subject)
-                         .ToList();
+            {
+                var items = session.Query<Consent>()
+                .Where(c => c.Subject == subject)
+                .ToList();
 
-                  return items.Select(i => new IdentityServer3.Core.Models.Consent
-                  {
-                      Subject = i.Subject,
-                      ClientId = i.ClientId,
-                      Scopes = ParseScopes(i.Scopes)
-                  }).ToList();
-              });
+                return items.Select(i => new IdentityServer3.Core.Models.Consent
+                {
+                    Subject = i.Subject,
+                    ClientId = i.ClientId,
+                    Scopes = ParseScopes(i.Scopes)
+                }).ToList();
+            });
 
             return await Task.FromResult(results);
         }
