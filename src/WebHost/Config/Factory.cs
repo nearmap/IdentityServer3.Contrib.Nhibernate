@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Linq;
 using AutoMapper;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
 using IdentityServer3.Contrib.Nhibernate;
+using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
 using IdentityServer3.Core.Models;
@@ -13,6 +15,7 @@ using NHibernate.Tool.hbm2ddl;
 using Client = IdentityServer3.Core.Models.Client;
 using Configuration = NHibernate.Cfg.Configuration;
 using Scope = IdentityServer3.Core.Models.Scope;
+using Id3Postgres = IdentityServer3.Contrib.Nhibernate.Postgres;
 
 namespace WebHost.Config
 {
@@ -49,11 +52,16 @@ namespace WebHost.Config
             var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
 
             var sessionFactory = Fluently.Configure()
-                .Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
+                .Database(Id3Postgres.PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
+                    //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
                     .ShowSql()
-                    .FormatSql())
+                    .FormatSql()
+                    .AdoNetBatchSize(20)
+                )
                 .Mappings(
-                    m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true)))
+                    m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true))
+                )
+                .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
                     SchemaMetadataUpdater.QuoteTableAndColumns(cfg);

@@ -100,6 +100,9 @@
     <Compile Include="Entities\Token.cs" />
     <Compile Include="Enums\TokenType.cs" />
     <Compile Include="Extensions\IdentityServerServiceFactoryExtensions.cs" />
+    <Compile Include="Postgres\PostgreSQLConfiguration.cs" />
+    <Compile Include="Postgres\PostgresSQL93Dialect.cs" />
+    <Compile Include="Postgres\TimeStampConvention.cs" />
     <Compile Include="Profiles\EntitiesProfile.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="NhibernateConfig\MappingHelper.cs" />
