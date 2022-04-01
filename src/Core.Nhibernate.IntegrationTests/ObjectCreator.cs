@@ -28,8 +28,8 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
-using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.AutoMoq;
+using AutoFixture;
+using AutoFixture.AutoMoq;
 using Consent = IdentityServer3.Contrib.Nhibernate.Entities.Consent;
 
 namespace Core.Nhibernate.IntegrationTests
