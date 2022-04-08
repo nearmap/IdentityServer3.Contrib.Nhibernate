@@ -1,18 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentNHibernate.Automapping;
-using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
-using FluentNHibernate.Conventions.Helpers;
-using IdentityServer3.Core.Configuration;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Cfg;
-using NHibernate.Tool.hbm2ddl;
-using System.Configuration;
 using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;
@@ -66,7 +55,6 @@ namespace IdentityServer3.Core.Configuration
 
             factory.ClientStore = new Registration<IClientStore, ClientStore>();
             factory.CorsPolicyService = new Registration<ICorsPolicyService, ClientConfigurationCorsPolicyService>();
-
         }
 
         private static void RegisterScopeStore(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)

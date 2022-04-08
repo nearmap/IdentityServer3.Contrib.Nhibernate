@@ -52,7 +52,7 @@ namespace WebHost.Config
             var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
 
             var sessionFactory = Fluently.Configure()
-                .Database(Id3Postgres.PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
+                .Database(PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
                     //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
                     .ShowSql()
                     .FormatSql()
@@ -70,7 +70,6 @@ namespace WebHost.Config
                 .BuildSessionFactory();
 
             return sessionFactory;
-
         }
 
         private static void BuildSchema(Configuration cfg)
@@ -95,7 +94,6 @@ namespace WebHost.Config
 
                 tx.Commit();
             }
-
         }
 
         public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession, IMapper mapper)

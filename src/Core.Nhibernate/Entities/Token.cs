@@ -16,6 +16,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Entities
         public virtual string SubjectId { get; set; }
 
         public virtual string ClientId { get; set; }
-
     }
 }

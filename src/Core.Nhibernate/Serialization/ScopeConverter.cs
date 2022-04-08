@@ -42,6 +42,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Serialization
             {
                 Name = source.Name
             };
+
             serializer.Serialize(writer, target);
         }
     }

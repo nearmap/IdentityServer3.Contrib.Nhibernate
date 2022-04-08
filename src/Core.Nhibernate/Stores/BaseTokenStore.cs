@@ -84,7 +84,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     ? null
                     : ConvertFromJson(token.JsonCode);
             });
-            return await Task.FromResult(toReturn);
+
+            return toReturn;
         }
 
         public async Task RemoveAsync(string key)
@@ -105,18 +106,18 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         public async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
         {
             var toReturn = ExecuteInTransaction(session =>
-              {
-                  var tokens = session.Query<Token>()
-                      .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                      .ToList();
+            {
+                var tokens = session.Query<Token>()
+                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                    .ToList();
 
-                  if (!tokens.Any()) return new List<ITokenMetadata>();
+                if (!tokens.Any()) return new List<ITokenMetadata>();
 
-                  var results = tokens.Select(x => ConvertFromJson(x.JsonCode)).ToArray();
-                  return results.Cast<ITokenMetadata>();
-              });
+                var results = tokens.Select(x => ConvertFromJson(x.JsonCode)).ToArray();
+                return results.Cast<ITokenMetadata>();
+            });
 
-            return await Task.FromResult(toReturn);
+            return toReturn;
         }
 
         public async Task RevokeAsync(string subjectId, string clientId)

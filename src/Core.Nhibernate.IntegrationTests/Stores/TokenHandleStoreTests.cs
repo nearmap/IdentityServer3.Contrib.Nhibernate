@@ -47,8 +47,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task StoreAsync()
         {
             //Arrange
-            
-
             var testKey = Guid.NewGuid().ToString();
             var testCode = ObjectCreator.GetTokenHandle();
 
@@ -107,7 +105,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 session.Delete(tokenHandle);
             });
-
         }
 
         [Fact]
@@ -228,7 +225,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(tokenHandle3);
                 session.Delete(tokenHandle4);
             });
-
         }
 
         [Fact]

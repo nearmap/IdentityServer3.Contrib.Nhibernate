@@ -36,12 +36,12 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ScopeStore : NhibernateStore, IScopeStore
     {
-        public ScopeStore(ISession session, IMapper mapper)
+        public ScopeStore(ISession session, IMapper mapper) 
             : base(session, mapper)
         {
         }
 
-        public async Task<IEnumerable<IdentityServer3.Core.Models.Scope>> FindScopesAsync(IEnumerable<string> scopeNames)
+        public async Task<IEnumerable<Core.Models.Scope>> FindScopesAsync(IEnumerable<string> scopeNames)
         {
             var result = ExecuteInTransaction(session =>
             {
@@ -58,11 +58,10 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
             });
 
-
-            return await Task.FromResult(result);
+            return result;
         }
 
-        public async Task<IEnumerable<IdentityServer3.Core.Models.Scope>> GetScopesAsync(bool publicOnly = true)
+        public async Task<IEnumerable<Core.Models.Scope>> GetScopesAsync(bool publicOnly = true)
         {
             var result = ExecuteInTransaction(session =>
             {
@@ -77,7 +76,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
             });
 
-            return await Task.FromResult(result);
+            return result;
         }
 
         private IQueryable<Scope> GetScopesBaseQuery(ISession session)

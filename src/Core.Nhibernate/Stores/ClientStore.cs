@@ -50,7 +50,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 return _mapper.Map<Core.Models.Client>(clientEntity);
             });
 
-            return await Task.FromResult(client);
+            return client;
         }
     }
 }

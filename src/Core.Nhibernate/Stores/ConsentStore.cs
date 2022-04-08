@@ -41,7 +41,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         {
         }
 
-        public async Task<IdentityServer3.Core.Models.Consent> LoadAsync(string subject, string client)
+        public async Task<Core.Models.Consent> LoadAsync(string subject, string client)
         {
             var result = ExecuteInTransaction(session =>
             {
@@ -51,7 +51,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
                 return item == null
                     ? null
-                    : new IdentityServer3.Core.Models.Consent
+                    : new Core.Models.Consent
                     {
                         Subject = item.Subject,
                         ClientId = item.ClientId,
@@ -59,10 +59,10 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     };
             });
 
-            return await Task.FromResult(result);
+            return result;
         }
 
-        public async Task UpdateAsync(IdentityServer3.Core.Models.Consent consent)
+        public async Task UpdateAsync(Core.Models.Consent consent)
         {
             ExecuteInTransaction(session =>
             {
@@ -99,7 +99,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             await Task.CompletedTask;
         }
 
-        public async Task<IEnumerable<IdentityServer3.Core.Models.Consent>> LoadAllAsync(string subject)
+        public async Task<IEnumerable<Core.Models.Consent>> LoadAllAsync(string subject)
         {
             var results = ExecuteInTransaction(session =>
             {
@@ -115,7 +115,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 }).ToList();
             });
 
-            return await Task.FromResult(results);
+            return results;
         }
 
         private IEnumerable<string> ParseScopes(string scopes)

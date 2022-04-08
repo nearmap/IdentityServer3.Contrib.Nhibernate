@@ -40,6 +40,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Serialization
             {
                 ClientId = source.ClientId
             };
+
             serializer.Serialize(writer, target);
         }
     }

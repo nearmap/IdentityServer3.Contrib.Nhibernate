@@ -32,6 +32,7 @@ using IdentityServer3.Core.Models;
 using AutoFixture;
 using AutoFixture.AutoMoq;
 using Consent = IdentityServer3.Contrib.Nhibernate.Entities.Consent;
+using System.Linq;
 
 namespace Core.Nhibernate.IntegrationTests
 {
@@ -89,11 +90,11 @@ namespace Core.Nhibernate.IntegrationTests
         private static Token GetAccessToken(string subjectId, string clientId)
         {
             var tokenBuilder = AFixture.Build<Token>()
-               .Without(t => t.Client)
-               .With(t => t.Claims, new List<Claim>()
-               {
+                .Without(t => t.Client)
+                .With(t => t.Claims, new List<Claim>()
+                {
                     new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString())
-               });
+                });
 
             var token = tokenBuilder.Create();
 
@@ -126,48 +127,29 @@ namespace Core.Nhibernate.IntegrationTests
         }
 
         public static IEnumerable<Claim> GetClaims(int nClaimsToGet)
-        {
-            var claims = new List<Claim>();
-
-            for (var i = 0; i < nClaimsToGet; i++)
-            {
-                claims.Add(GetClaim());
-            }
-
-            return claims;
-        }
+            => Enumerable.Range(0, nClaimsToGet).Select(x => GetClaim());
 
         public static Claim GetClaim()
-        {
-            var claim = new Claim(AFixture.Create<string>(), AFixture.Create<string>());
-
-            return claim;
-        }
-
+            => new Claim(AFixture.Create<string>(), AFixture.Create<string>());
 
         public static IEnumerable<Scope> GetScopes(int nScopesToGet)
-        {
-            var scopes = AFixture.CreateMany<Scope>(nScopesToGet);
+            => AFixture.CreateMany<Scope>(nScopesToGet);
 
-            return scopes;
-        }
-
-        public static Scope GetScope()
-        {
-            var scope = AFixture.Create<Scope>();
-
-            return scope;
-        }
+        public static Scope GetScope() => AFixture.Create<Scope>();
 
         public static Consent GetConsent(string clientId = null, string subject = null)
         {
             var consent = AFixture.Create<Consent>();
 
             if (clientId != null)
+            {
                 consent.ClientId = clientId;
-
+            }
+                
             if (subject != null)
+            {
                 consent.Subject = subject;
+            }
 
             return consent;
         }

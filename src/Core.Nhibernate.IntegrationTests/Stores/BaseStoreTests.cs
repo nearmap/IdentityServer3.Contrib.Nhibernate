@@ -32,7 +32,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.Serialization;
@@ -77,8 +76,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
 
             var sessionFactory = Fluently.Configure()
-                .Database(Id3Postgres.PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
-                //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
+                .Database(PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
+                    //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
                     .ShowSql()
                     .FormatSql()
                     .AdoNetBatchSize(20)
@@ -95,7 +94,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 .BuildSessionFactory();
 
             return sessionFactory;
-
         }
 
         private void BuildSchema(Configuration cfg)
@@ -124,7 +122,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                         throw;
                     }
                 }
-
             }
         }
 

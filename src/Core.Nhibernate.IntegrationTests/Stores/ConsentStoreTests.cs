@@ -34,10 +34,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ConsentStoreTests : BaseStoreTests
     {
-        public ConsentStoreTests()
-        {
-        }
-
         [Fact]
         public async Task LoadAsync()
         {
@@ -62,8 +58,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             //Assert
             Assert.NotNull(result);
-            Assert.True(result.ClientId.Equals(testConsent1.ClientId) &&
-                        result.Subject.Equals(testConsent1.Subject));
+            Assert.True(
+                result.ClientId.Equals(testConsent1.ClientId) &&
+                result.Subject.Equals(testConsent1.Subject));
 
             //CleanUp
             ExecuteInTransaction(session =>

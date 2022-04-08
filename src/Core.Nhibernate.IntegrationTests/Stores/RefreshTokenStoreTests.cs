@@ -105,7 +105,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 session.Delete(tokenHandle);
             });
-
         }
 
         [Fact]
@@ -225,7 +224,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(tokenHandle3);
                 session.Delete(tokenHandle4);
             });
-
         }
 
         [Fact]
@@ -265,7 +263,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 session.Save(tokenHandle);
                 session.Save(tokenHandleToRevoke);
-
             });
 
             //Act

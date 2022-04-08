@@ -6,8 +6,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Postgres
     public class PostgresSQL93Dialect : PostgreSQL82Dialect
     {
         public PostgresSQL93Dialect()
-        {
-            RegisterColumnType(DbType.DateTimeOffset, "timestamp with time zone");
-        }
+            => RegisterColumnType(DbType.DateTimeOffset, "timestamp with time zone");
     }
 }

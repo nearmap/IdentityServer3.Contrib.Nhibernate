@@ -88,9 +88,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(testScope1Entity);
                 session.Delete(testScope2Entity);
                 session.Delete(testScope3Entity);
-
             });
-
         }
 
         [Fact]
@@ -113,7 +111,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Save(testScope1Entity);
                 session.Save(testScope2Entity);
                 session.Save(testScope3Entity);
-
             });
 
             //Act
@@ -135,7 +132,5 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(testScope3Entity);
             });
         }
-
-
     }
 }

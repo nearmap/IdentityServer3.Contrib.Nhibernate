@@ -91,6 +91,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 }
             }
         }
-
     }
 }

@@ -294,7 +294,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             });
         }
 
-
         #endregion
     }
 }

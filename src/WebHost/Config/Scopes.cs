@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using IdentityServer3.Core.Models;
 
 namespace WebHost.Config
@@ -35,7 +31,7 @@ namespace WebHost.Config
                         new Secret("secret".Sha256())
                     }
                 },
-             };
+            };
         }
     }
 }

@@ -45,6 +45,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Serialization
                 AuthenticationType = source.Identity.AuthenticationType,
                 Claims = source.Claims.Select(x => new ClaimLite { Type = x.Type, Value = x.Value }).ToArray()
             };
+
             serializer.Serialize(writer, target);
         }
     }

@@ -41,7 +41,5 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 
             return map;
         }
-
-
     }
 }

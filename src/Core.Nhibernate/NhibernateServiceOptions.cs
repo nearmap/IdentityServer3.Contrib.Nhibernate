@@ -12,6 +12,5 @@ namespace IdentityServer3.Contrib.Nhibernate
         {
             NhibernateSessionFactory = nhSessionFactory;
         }
-
     }
 }

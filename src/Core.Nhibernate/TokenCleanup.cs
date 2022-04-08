@@ -80,8 +80,6 @@ namespace IdentityServer3.Contrib.Nhibernate
                 _session.CreateQuery($"DELETE {nameof(Token)} t WHERE t.{nameof(Token.Expiry)} < :refDate")
                     .SetParameter("refDate", DateTime.UtcNow)
                     .ExecuteUpdate();
-
-                await Task.FromResult(0);
             }
             catch (Exception ex)
             {

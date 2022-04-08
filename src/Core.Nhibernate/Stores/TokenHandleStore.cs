@@ -45,7 +45,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         {
             ExecuteInTransaction(session =>
             {
-                var nhCode = new IdentityServer3.Contrib.Nhibernate.Entities.Token
+                var nhCode = new Entities.Token
                 {
                     Key = key,
                     SubjectId = value.SubjectId,

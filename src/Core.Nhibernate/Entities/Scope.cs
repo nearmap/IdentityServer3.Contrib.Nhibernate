@@ -30,6 +30,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Entities
         public virtual bool ShowInDiscoveryDocument { get; set; }
 
         public virtual bool AllowUnrestrictedIntrospection { get; set; }
-
     }
 }
