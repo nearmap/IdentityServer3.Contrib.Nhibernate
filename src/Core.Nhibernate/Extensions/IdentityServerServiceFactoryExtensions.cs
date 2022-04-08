@@ -13,7 +13,6 @@ using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Tool.hbm2ddl;
 using System.Configuration;
-using Core.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;

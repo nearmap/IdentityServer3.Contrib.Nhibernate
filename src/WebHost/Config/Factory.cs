@@ -4,12 +4,12 @@ using System.Data;
 using System.Linq;
 using AutoMapper;
 using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
 using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
 using IdentityServer3.Core.Models;
+using Microsoft.Extensions.Logging;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
 using Client = IdentityServer3.Core.Models.Client;
@@ -21,13 +21,13 @@ namespace WebHost.Config
 {
     static class Factory
     {
-        public static IdentityServerServiceFactory Configure(IMapper mapper)
+        public static IdentityServerServiceFactory Configure(IMapper mapper, ILogger logger)
         {
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
             var tokenCleanUpSession = nhSessionFactory.OpenSession();
 
-            var cleanup = new TokenCleanup(tokenCleanUpSession, 60);
+            var cleanup = new TokenCleanup(tokenCleanUpSession, logger, 60);
             cleanup.Start();
 
             // these two calls just pre-populate the test DB from the in-memory config
