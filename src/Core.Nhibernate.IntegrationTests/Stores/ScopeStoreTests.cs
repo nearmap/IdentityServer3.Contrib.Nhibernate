@@ -33,6 +33,8 @@ using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
 using Xunit;
 
+using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
+
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ScopeStoreTests : BaseStoreTests
@@ -56,9 +58,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var testScope1 = ObjectCreator.GetScope();
             var testScope2 = ObjectCreator.GetScope();
             var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity(_mapper);
-            var testScope2Entity = testScope2.ToEntity(_mapper);
-            var testScope3Entity = testScope3.ToEntity(_mapper);
+            var testScope1Entity = _mapper.Map<Scope, Entities.Scope>(testScope1);
+            var testScope2Entity = _mapper.Map<Scope, Entities.Scope>(testScope2);
+            var testScope3Entity = _mapper.Map<Scope, Entities.Scope>(testScope3);
 
             ExecuteInTransaction(session =>
             {
@@ -99,9 +101,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var testScope1 = ObjectCreator.GetScope();
             var testScope2 = ObjectCreator.GetScope();
             var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity(_mapper);
-            var testScope2Entity = testScope2.ToEntity(_mapper);
-            var testScope3Entity = testScope3.ToEntity(_mapper);
+            var testScope1Entity = _mapper.Map<Scope, Entities.Scope>(testScope1);
+            var testScope2Entity = _mapper.Map<Scope, Entities.Scope>(testScope2);
+            var testScope3Entity = _mapper.Map<Scope, Entities.Scope>(testScope3);
             testScope1Entity.ShowInDiscoveryDocument = true;
             testScope2Entity.ShowInDiscoveryDocument = true;
             testScope3Entity.ShowInDiscoveryDocument = false;

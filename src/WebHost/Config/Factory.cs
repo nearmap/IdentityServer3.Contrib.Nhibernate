@@ -15,7 +15,7 @@ using NHibernate.Tool.hbm2ddl;
 using Client = IdentityServer3.Core.Models.Client;
 using Configuration = NHibernate.Cfg.Configuration;
 using Scope = IdentityServer3.Core.Models.Scope;
-using Id3Postgres = IdentityServer3.Contrib.Nhibernate.Postgres;
+using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace WebHost.Config
 {
@@ -100,11 +100,11 @@ namespace WebHost.Config
         {
             using (var tx = nhSession.BeginTransaction())
             {
-                var scopesInDb = nhSession.Query<IdentityServer3.Contrib.Nhibernate.Entities.Scope>();
+                var scopesInDb = nhSession.Query<Entities.Scope>();
 
                 if (scopesInDb.Any()) return;
 
-                var toSave = scopes.Select(s => s.ToEntity(mapper)).ToList();
+                var toSave = scopes.Select(s => mapper.Map<Scope, Entities.Scope>(s));
 
                 foreach (var scope in toSave)
                 {
