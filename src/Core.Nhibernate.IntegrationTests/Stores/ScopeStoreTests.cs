@@ -24,44 +24,43 @@
 
 
 
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
+using IdentityServer3.Core.Services;
 using Xunit;
 
 using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ScopeStoreTests : BaseStoreTests
+    public class ScopeStoreTests : BaseStoreTests, IDisposable
     {
-        private readonly IMapper _mapper;
+        private readonly IScopeStore sut;
+        private readonly Scope testScope1 = ObjectCreator.GetScope();
+        private readonly Scope testScope2 = ObjectCreator.GetScope();
+        private readonly Scope testScope3 = ObjectCreator.GetScope();
+        private readonly Entities.Scope testScope1Entity;
+        private readonly Entities.Scope testScope2Entity;
+        private readonly Entities.Scope testScope3Entity;
+        private bool disposedValue;
 
         public ScopeStoreTests()
         {
-            _mapper = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<EntitiesProfile>();
-            })
-                .CreateMapper();
+            sut = new ScopeStore(Session, Mapper);
+            testScope1Entity = Mapper.Map<Scope, Entities.Scope>(testScope1);
+            testScope2Entity = Mapper.Map<Scope, Entities.Scope>(testScope2);
+            testScope3Entity = Mapper.Map<Scope, Entities.Scope>(testScope3);
         }
 
         [Fact]
         public async Task FindScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession, _mapper);
-            var testScope1 = ObjectCreator.GetScope();
-            var testScope2 = ObjectCreator.GetScope();
-            var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = _mapper.Map<Scope, Entities.Scope>(testScope1);
-            var testScope2Entity = _mapper.Map<Scope, Entities.Scope>(testScope2);
-            var testScope3Entity = _mapper.Map<Scope, Entities.Scope>(testScope3);
-
             ExecuteInTransaction(session =>
             {
                 session.Save(testScope1Entity);
@@ -83,27 +82,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             Assert.Contains(testScope1.Name, scopeNames);
             Assert.Contains(testScope2.Name, scopeNames);
             Assert.DoesNotContain(testScope3.Name, scopeNames);
-
-            //CleanUp
-            ExecuteInTransaction(session =>
-            {
-                session.Delete(testScope1Entity);
-                session.Delete(testScope2Entity);
-                session.Delete(testScope3Entity);
-            });
         }
 
         [Fact]
         public async Task GetScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession, _mapper);
-            var testScope1 = ObjectCreator.GetScope();
-            var testScope2 = ObjectCreator.GetScope();
-            var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = _mapper.Map<Scope, Entities.Scope>(testScope1);
-            var testScope2Entity = _mapper.Map<Scope, Entities.Scope>(testScope2);
-            var testScope3Entity = _mapper.Map<Scope, Entities.Scope>(testScope3);
             testScope1Entity.ShowInDiscoveryDocument = true;
             testScope2Entity.ShowInDiscoveryDocument = true;
             testScope3Entity.ShowInDiscoveryDocument = false;
@@ -125,14 +109,32 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             Assert.Contains(testScope1.Name, scopeNames);
             Assert.Contains(testScope2.Name, scopeNames);
             Assert.DoesNotContain(testScope3.Name, scopeNames);
+        }
 
-            //CleanUp
-            ExecuteInTransaction(session =>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
             {
-                session.Delete(testScope1Entity);
-                session.Delete(testScope2Entity);
-                session.Delete(testScope3Entity);
-            });
+                if (disposing)
+                {
+                    //CleanUp
+                    ExecuteInTransaction(session =>
+                    {
+                        session.Delete(testScope1Entity);
+                        session.Delete(testScope2Entity);
+                        session.Delete(testScope3Entity);
+                    });
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

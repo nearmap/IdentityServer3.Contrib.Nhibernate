@@ -40,7 +40,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public TokenHandleStoreTests()
         {
-            sut = new TokenHandleStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+            sut = new TokenHandleStore(Session, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
         }
 
         [Fact]

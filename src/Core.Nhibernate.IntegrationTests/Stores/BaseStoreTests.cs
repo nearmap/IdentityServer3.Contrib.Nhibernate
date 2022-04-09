@@ -42,7 +42,6 @@ using Newtonsoft.Json;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
 using Configuration = NHibernate.Cfg.Configuration;
-using Id3Postgres = IdentityServer3.Contrib.Nhibernate.Postgres;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -51,8 +50,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         protected readonly IMapper Mapper;
         protected ISessionFactory NhSessionFactory;
 
-        protected ISession NhibernateSession { get; }
-        private readonly ISession _nhibernateAuxSession;
+        protected ISession Session { get; }
+        private readonly ISession _readSession;
 
         protected readonly Mock<IScopeStore> ScopeStoreMock = new Mock<IScopeStore>();
         protected readonly Mock<IClientStore> ClientStoreMock = new Mock<IClientStore>();
@@ -67,8 +66,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             NhSessionFactory = GetNHibernateSessionFactory();
 
-            _nhibernateAuxSession = NhSessionFactory.OpenSession();
-            NhibernateSession = NhSessionFactory.OpenSession();
+            _readSession = NhSessionFactory.OpenSession();
+            Session = NhSessionFactory.OpenSession();
         }
 
         private ISessionFactory GetNHibernateSessionFactory()
@@ -103,17 +102,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhibernateAuxSession.Transaction != null && _nhibernateAuxSession.Transaction.IsActive)
+            if (_readSession.Transaction != null && _readSession.Transaction.IsActive)
             {
-                actionToExecute.Invoke(_nhibernateAuxSession);
+                actionToExecute.Invoke(_readSession);
             }
             else
             {
-                using (var tx = _nhibernateAuxSession.BeginTransaction(isolationLevel))
+                using (var tx = _readSession.BeginTransaction(isolationLevel))
                 {
                     try
                     {
-                        actionToExecute.Invoke(_nhibernateAuxSession);
+                        actionToExecute.Invoke(_readSession);
                         tx.Commit();
                     }
                     catch (Exception)
@@ -124,6 +123,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 }
             }
         }
+
+        protected string GetNewGuidString() => Guid.NewGuid().ToString();
 
         private JsonSerializerSettings GetJsonSerializerSettings()
         {

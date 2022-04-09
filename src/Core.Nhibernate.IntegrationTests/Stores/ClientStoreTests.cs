@@ -24,64 +24,94 @@
 
 
 
+using System;
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
+using IdentityServer3.Core.Services;
 using Xunit;
+
+using Client = IdentityServer3.Contrib.Nhibernate.Entities.Client;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ClientStoreTests : BaseStoreTests
+    public class ClientStoreTests : BaseStoreTests, IDisposable
     {
-        private readonly IMapper _mapper;
+        private readonly IClientStore sut;
+
+        private readonly Client testClient1Entity;
+        private readonly Client testClient2Entity;
+        private readonly Client testClient3Entity;
+
+        private readonly string _clientIdToFind = "ClientIdToFind";
+        private bool disposedValue;
 
         public ClientStoreTests()
         {
-            _mapper = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<EntitiesProfile>();
-            })
-                .CreateMapper();
-        }
+            sut = new ClientStore(Session, Mapper);
 
-        [Fact]
-        public async Task FindClientByIdAsync()
-        {
-            var clientIdToFind = "ClientIdToFind";
-
-            //Arrange
-            var sut = new ClientStore(NhibernateSession, _mapper);
-            var testClient1Entity = ObjectCreator.GetClient().ToEntity(_mapper);
-            var testClient2Entity = ObjectCreator.GetClient().ToEntity(_mapper);
-            var testClient3Entity = ObjectCreator.GetClient().ToEntity(_mapper);
-
-            var testClientToFind = ObjectCreator.GetClient(clientIdToFind);
-            var testClientToFindEntity = testClientToFind.ToEntity(_mapper);
+            testClient1Entity = ObjectCreator.GetClient().ToEntity(Mapper);
+            testClient2Entity = ObjectCreator.GetClient().ToEntity(Mapper);
+            testClient3Entity = ObjectCreator.GetClient().ToEntity(Mapper);
 
             ExecuteInTransaction(session =>
             {
                 session.Save(testClient1Entity);
                 session.Save(testClient2Entity);
                 session.Save(testClient3Entity);
+            });
+        }
+
+        [Fact]
+        public async Task FindClientByIdAsync()
+        {
+            //Arrange
+            var testClientToFind = ObjectCreator.GetClient(_clientIdToFind);
+            var testClientToFindEntity = testClientToFind.ToEntity(Mapper);
+
+            ExecuteInTransaction(session =>
+            {
                 session.Save(testClientToFindEntity);
             });
 
             //Act
-            var result = await sut.FindClientByIdAsync(clientIdToFind);
+            var result = await sut.FindClientByIdAsync(_clientIdToFind);
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(clientIdToFind, result.ClientId);
+            Assert.Equal(_clientIdToFind, result.ClientId);
 
             //CleanUp
             ExecuteInTransaction(session =>
             {
-                session.Delete(testClient1Entity);
-                session.Delete(testClient2Entity);
-                session.Delete(testClient3Entity);
                 session.Delete(testClientToFindEntity);
             });
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    //CleanUp
+                    ExecuteInTransaction(session =>
+                    {
+                        session.Delete(testClient1Entity);
+                        session.Delete(testClient2Entity);
+                        session.Delete(testClient3Entity);
+                    });
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

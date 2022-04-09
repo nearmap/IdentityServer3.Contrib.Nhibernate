@@ -24,33 +24,49 @@
 
 
 
+using System;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using IdentityServer3.Core.Services;
 using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ConsentStoreTests : BaseStoreTests
+    public class ConsentStoreTests : BaseStoreTests, IDisposable
     {
+        private readonly IConsentStore sut;
+
+        private readonly string subjectToGet = "subject1";
+        private readonly string clientToGet = "client1";
+
+        private Consent testConsent1 = ObjectCreator.GetConsent();
+        private Consent testConsent2 = ObjectCreator.GetConsent();
+        private bool disposedValue;
+        private readonly Consent testConsent3 = ObjectCreator.GetConsent();
+
+        public ConsentStoreTests()
+        {
+            sut = new ConsentStore(Session, Mapper);
+
+            ExecuteInTransaction(session =>
+            {
+                session.Save(testConsent3);
+            });
+        }
+
         [Fact]
         public async Task LoadAsync()
         {
-            string subjectToGet = "subject1";
-            string clientToGet = "client1";
-
             //Arrange
-            var sut = new ConsentStore(NhibernateSession, Mapper);
-            var testConsent1 = ObjectCreator.GetConsent(clientToGet, subjectToGet);
-            var testConsent2 = ObjectCreator.GetConsent();
-            var testConsent3 = ObjectCreator.GetConsent();
+            testConsent1 = ObjectCreator.GetConsent(clientToGet, subjectToGet);
 
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
                 session.Save(testConsent2);
-                session.Save(testConsent3);
             });
 
             //Act
@@ -61,32 +77,19 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             Assert.True(
                 result.ClientId.Equals(testConsent1.ClientId) &&
                 result.Subject.Equals(testConsent1.Subject));
-
-            //CleanUp
-            ExecuteInTransaction(session =>
-            {
-                session.Delete(testConsent1);
-                session.Delete(testConsent2);
-                session.Delete(testConsent3);
-            });
         }
 
         [Fact]
         public async Task LoadAllAsync()
         {
-            string subjectToGet = "subject1";
-
             //Arrange
-            var sut = new ConsentStore(NhibernateSession, Mapper);
-            var testConsent1 = ObjectCreator.GetConsent(null, subjectToGet);
-            var testConsent2 = ObjectCreator.GetConsent(null, subjectToGet);
-            var testConsent3 = ObjectCreator.GetConsent();
+            testConsent1 = ObjectCreator.GetConsent(null, subjectToGet);
+            testConsent2 = ObjectCreator.GetConsent(null, subjectToGet);
 
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
                 session.Save(testConsent2);
-                session.Save(testConsent3);
             });
 
             //Act
@@ -96,14 +99,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             //Assert
             Assert.NotNull(result);
             Assert.True(result.All(c => c.Subject.Equals(subjectToGet)));
-
-            //CleanUp
-            ExecuteInTransaction(session =>
-            {
-                session.Delete(testConsent1);
-                session.Delete(testConsent2);
-                session.Delete(testConsent3);
-            });
         }
 
         [Fact]
@@ -112,16 +107,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var updatedClientId = "updatedClientId";
 
             //Arrange
-            var sut = new ConsentStore(NhibernateSession, Mapper);
-            var testConsent1 = ObjectCreator.GetConsent();
-            var testConsent2 = ObjectCreator.GetConsent();
-            var testConsent3 = ObjectCreator.GetConsent();
-
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
                 session.Save(testConsent2);
-                session.Save(testConsent3);
             });
 
             var modelToUpdate = await sut.LoadAsync(testConsent1.Subject, testConsent1.ClientId);
@@ -139,9 +128,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Assert.NotNull(updatedEntity);
 
                 //CleanUp
-                session.Delete(testConsent1);
-                session.Delete(testConsent2);
-                session.Delete(testConsent3);
                 session.Delete(updatedEntity);
             });
         }
@@ -150,16 +136,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task UpdateAsync_WithUpdatedScopes()
         {
             //Arrange
-            var sut = new ConsentStore(NhibernateSession, Mapper);
-            var testConsent1 = ObjectCreator.GetConsent();
-            var testConsent2 = ObjectCreator.GetConsent();
-            var testConsent3 = ObjectCreator.GetConsent();
-
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
                 session.Save(testConsent2);
-                session.Save(testConsent3);
             });
 
             var modelToUpdate = await sut.LoadAsync(testConsent1.Subject, testConsent1.ClientId);
@@ -173,31 +153,18 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             Assert.NotNull(updatedModel);
             Assert.True(updatedModel.Scopes.Count() == 5);
-
-            //CleanUp
-            ExecuteInTransaction(session =>
-            {
-                session.Delete(testConsent1);
-                session.Delete(testConsent2);
-                session.Delete(testConsent3);
-            });
         }
 
         [Fact]
         public async Task RevokeAsync()
         {
             //Arrange
-            var sut = new ConsentStore(NhibernateSession, Mapper);
-            var testConsent1 = ObjectCreator.GetConsent();
-            var testConsent2 = ObjectCreator.GetConsent();
-            var testConsent3 = ObjectCreator.GetConsent();
             var consentToRevoke = ObjectCreator.GetConsent();
 
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
                 session.Save(testConsent2);
-                session.Save(testConsent3);
                 session.Save(consentToRevoke);
             });
 
@@ -208,14 +175,32 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var revokedConsent = await sut.LoadAsync(consentToRevoke.Subject, consentToRevoke.ClientId);
 
             Assert.Null(revokedConsent);
+        }
 
-            //CleanUp
-            ExecuteInTransaction(session =>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
             {
-                session.Delete(testConsent1);
-                session.Delete(testConsent2);
-                session.Delete(testConsent3);
-            });
+                if (disposing)
+                {
+                    //CleanUp
+                    ExecuteInTransaction(session =>
+                    {
+                        session.Delete(testConsent1);
+                        session.Delete(testConsent2);
+                        session.Delete(testConsent3);
+                    });
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

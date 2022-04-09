@@ -29,6 +29,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
@@ -39,18 +40,32 @@ namespace Core.Nhibernate.IntegrationTests.Stores
     {
         private readonly IAuthorizationCodeStore sut;
 
+        private readonly string testKey = Guid.NewGuid().ToString();
+        private readonly AuthorizationCode testCode = ObjectCreator.GetAuthorizationCode();
+
+        private readonly Token nhCode;
+
         public AuthorizationCodeStoreTests()
         {
-            sut = new AuthorizationCodeStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+            sut = new AuthorizationCodeStore(Session, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+
+            nhCode = GetToken(testKey, testCode);
         }
+
+        private Token GetToken(string key, AuthorizationCode code)
+            => new Token
+            {
+                Key = key,
+                SubjectId = code.SubjectId,
+                ClientId = code.ClientId,
+                JsonCode = ConvertToJson(code),
+                Expiry = DateTime.UtcNow.AddSeconds(code.Client.AuthorizationCodeLifetime),
+                TokenType = TokenType.AuthorizationCode
+            };
 
         [Fact]
         public async Task StoreAsync()
         {
-            //Arrange
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetAuthorizationCode();
-
             //Act
             await sut.StoreAsync(testKey, testCode);
 
@@ -73,20 +88,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         [Fact]
         public async Task GetAsync()
         {
-            //Arrange
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetAuthorizationCode();
-
-            var nhCode = new Token
-            {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
             SetupScopeStoreMock();
 
             ExecuteInTransaction(session =>
@@ -106,26 +107,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(nhCode);
                 session.Clear();
             });
-
         }
 
         [Fact]
         public async Task RemoveAsync()
         {
-            //Arrange
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetAuthorizationCode();
-
-            var nhCode = new Token
-            {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
             ExecuteInTransaction(session =>
             {
                 session.Save(nhCode);
@@ -143,7 +129,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.Key == testKey);
 
                 Assert.Null(token);
-
             });
         }
 
@@ -151,56 +136,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
-            var subjectId1 = Guid.NewGuid().ToString();
-            var subjectId2 = Guid.NewGuid().ToString();
+            var subjectId1 = GetNewGuidString();
+            var subjectId2 = GetNewGuidString();
 
-            var testKey1 = Guid.NewGuid().ToString();
-            var testCode1 = ObjectCreator.GetAuthorizationCode(subjectId1);
-            var nhCode1 = new Token
-            {
-                Key = testKey1,
-                SubjectId = testCode1.SubjectId,
-                ClientId = testCode1.ClientId,
-                JsonCode = ConvertToJson(testCode1),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode1.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
-            var testKey2 = Guid.NewGuid().ToString();
-            var testCode2 = ObjectCreator.GetAuthorizationCode(subjectId1);
-            var nhCode2 = new Token
-            {
-                Key = testKey2,
-                SubjectId = testCode2.SubjectId,
-                ClientId = testCode2.ClientId,
-                JsonCode = ConvertToJson(testCode2),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode2.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
-            var testKey3 = Guid.NewGuid().ToString();
-            var testCode3 = ObjectCreator.GetAuthorizationCode(subjectId2);
-            var nhCode3 = new Token
-            {
-                Key = testKey3,
-                SubjectId = testCode3.SubjectId,
-                ClientId = testCode3.ClientId,
-                JsonCode = ConvertToJson(testCode3),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode3.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
-            var testKey4 = Guid.NewGuid().ToString();
-            var testCode4 = ObjectCreator.GetAuthorizationCode(subjectId2);
-            var nhCode4 = new Token
-            {
-                Key = testKey4,
-                SubjectId = testCode4.SubjectId,
-                ClientId = testCode4.ClientId,
-                JsonCode = ConvertToJson(testCode4),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode4.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
+            var nhCode1 = GetToken(GetNewGuidString(), ObjectCreator.GetAuthorizationCode(subjectId1));
+            var nhCode2 = GetToken(GetNewGuidString(), ObjectCreator.GetAuthorizationCode(subjectId1));
+            var nhCode3 = GetToken(GetNewGuidString(), ObjectCreator.GetAuthorizationCode(subjectId2));
+            var nhCode4 = GetToken(GetNewGuidString(), ObjectCreator.GetAuthorizationCode(subjectId2));
 
             SetupScopeStoreMock();
 
@@ -227,41 +169,18 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 session.Delete(nhCode3);
                 session.Delete(nhCode4);
             });
-
         }
 
         [Fact]
         public async Task RevokeAsync()
         {
             //Arrange
-            var subjectIdToRevoke = Guid.NewGuid().ToString();
-            var clientIdToRevoke = Guid.NewGuid().ToString();
+            var subjectIdToRevoke = GetNewGuidString();
+            var clientIdToRevoke = GetNewGuidString();
 
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetAuthorizationCode();
-
-            var nhCode = new Token
-            {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
-
-            var testKeyToRevoke = Guid.NewGuid().ToString();
+            var testKeyToRevoke = GetNewGuidString();
             var testCodeToRevoke = ObjectCreator.GetAuthorizationCode(subjectIdToRevoke, clientIdToRevoke);
-
-            var nhCodeToRevoke = new Token
-            {
-                Key = testKeyToRevoke,
-                SubjectId = testCodeToRevoke.SubjectId,
-                ClientId = testCodeToRevoke.ClientId,
-                JsonCode = ConvertToJson(testCodeToRevoke),
-                Expiry = DateTime.UtcNow.AddSeconds(testCodeToRevoke.Client.AuthorizationCodeLifetime),
-                TokenType = TokenType.AuthorizationCode
-            };
+            var nhCodeToRevoke = GetToken(testKeyToRevoke, testCodeToRevoke);
 
             ExecuteInTransaction(session =>
             {
@@ -271,7 +190,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             //Act
             await sut.RevokeAsync(subjectIdToRevoke, clientIdToRevoke);
-
 
             ExecuteInTransaction(session =>
             {
