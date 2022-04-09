@@ -29,7 +29,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Serialization
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var source = serializer.Deserialize<ClientLite>(reader);
-            return AsyncHelper.RunSync(async () => await _clientStore.FindClientByIdAsync(source.ClientId));
+            return _clientStore.FindClientByIdAsync(source.ClientId).Result;
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)

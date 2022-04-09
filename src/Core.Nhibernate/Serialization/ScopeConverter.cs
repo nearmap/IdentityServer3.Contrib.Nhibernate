@@ -30,8 +30,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Serialization
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var source = serializer.Deserialize<ScopeLite>(reader);
-            var scopes = AsyncHelper.RunSync(async () => await _scopeStore.FindScopesAsync(new string[] { source.Name }));
-            return scopes.Single();
+            return _scopeStore.FindScopesAsync(new string[] { source.Name }).Result.Single();
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)

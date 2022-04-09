@@ -135,7 +135,6 @@
     <Compile Include="NhibernateConfig\MappingOverrides\ScopeMappingOverride.cs" />
     <Compile Include="NhibernateConfig\MappingOverrides\ScopeSecretMappingOverride.cs" />
     <Compile Include="NhibernateConfig\MappingOverrides\TokenMappingOverride.cs" />
-    <Compile Include="Serialization\AsyncHelper.cs" />
     <Compile Include="Serialization\ClaimConverter.cs" />
     <Compile Include="Serialization\ClaimsPrincipalConverter.cs" />
     <Compile Include="Serialization\ClientConverter.cs" />
