@@ -8,7 +8,6 @@ using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
-using IdentityServer3.Core.Models;
 using Microsoft.Extensions.Logging;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
@@ -21,8 +20,11 @@ namespace WebHost.Config
 {
     static class Factory
     {
+        private static IMapper _mapper;
+
         public static IdentityServerServiceFactory Configure(IMapper mapper, ILogger logger)
         {
+            _mapper = mapper;
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
             var tokenCleanUpSession = nhSessionFactory.OpenSession();
@@ -81,11 +83,11 @@ namespace WebHost.Config
         {
             using (var tx = nhSession.BeginTransaction())
             {
-                var clientsInDb = nhSession.Query<IdentityServer3.Contrib.Nhibernate.Entities.Client>();
+                var clientsInDb = nhSession.Query<Entities.Client>();
 
                 if (clientsInDb.Any()) return;
 
-                var toSave = clients.Select(c => c.ToEntity(mapper)).ToList();
+                var toSave = clients.Select(c => _mapper.Map<Client, Entities.Client>(c));
 
                 foreach (var client in toSave)
                 {

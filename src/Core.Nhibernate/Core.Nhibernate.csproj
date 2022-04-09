@@ -95,7 +95,6 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>VersionInfo.cs</Link>
     </Compile>
-    <Compile Include="Extensions\ClientExtensions.cs" />
     <Compile Include="NhibernateConfig\AutomappingConfiguration.cs" />
     <Compile Include="Entities\BaseEntity.cs" />
     <Compile Include="Entities\Client.cs" />

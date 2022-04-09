@@ -31,7 +31,8 @@ using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 
-using Client = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using ClientModel = IdentityServer3.Core.Models.Client;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -39,9 +40,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
     {
         private readonly IClientStore sut;
 
-        private readonly Client testClient1Entity;
-        private readonly Client testClient2Entity;
-        private readonly Client testClient3Entity;
+        private readonly ClientEntity testClient1Entity;
+        private readonly ClientEntity testClient2Entity;
+        private readonly ClientEntity testClient3Entity;
 
         private readonly string _clientIdToFind = "ClientIdToFind";
         private bool disposedValue;
@@ -50,9 +51,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         {
             sut = new ClientStore(Session, Mapper);
 
-            testClient1Entity = ObjectCreator.GetClient().ToEntity(Mapper);
-            testClient2Entity = ObjectCreator.GetClient().ToEntity(Mapper);
-            testClient3Entity = ObjectCreator.GetClient().ToEntity(Mapper);
+            testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
+            testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
+            testClient3Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
 
             ExecuteInTransaction(session =>
             {
@@ -67,7 +68,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         {
             //Arrange
             var testClientToFind = ObjectCreator.GetClient(_clientIdToFind);
-            var testClientToFindEntity = testClientToFind.ToEntity(Mapper);
+            var testClientToFindEntity = Mapper.Map<ClientModel, ClientEntity>(testClientToFind);
 
             ExecuteInTransaction(session =>
             {
