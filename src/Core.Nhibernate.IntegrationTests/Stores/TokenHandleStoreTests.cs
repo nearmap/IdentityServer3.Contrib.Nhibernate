@@ -26,6 +26,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Enums;
@@ -41,6 +42,46 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public TokenHandleStoreTests()
         {
             sut = new TokenHandleStore(Session, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+        }
+
+        private string GetJsonCodeFromRefreshToken(IdentityServer3.Core.Models.Token code)
+        {
+            var jsonBuilder = new StringBuilder();
+
+            jsonBuilder.Append("{");
+            jsonBuilder.Append($"\"Audience\":\"{code.Audience}\",");
+            jsonBuilder.Append($"\"Issuer\":\"{code.Issuer}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.fffffffzzz}\",");
+            jsonBuilder.Append($"\"Lifetime\":{code.Lifetime},");
+            jsonBuilder.Append($"\"Type\":\"{code.Type}\",");
+            jsonBuilder.Append("\"Client\":{");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\"");
+            jsonBuilder.Append("},");
+            jsonBuilder.Append("\"Claims\":[");
+            foreach (var claim in code.Claims)
+            {
+                jsonBuilder.Append("{");
+                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
+                jsonBuilder.Append("},");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("],");
+            jsonBuilder.Append($"\"Version\":{code.Version},");
+            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
+            jsonBuilder.Append("\"Scopes\":[");
+            foreach (var scope in code.Scopes)
+            {
+                jsonBuilder.Append($"\"{scope}\",");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("}");
+
+            return jsonBuilder.ToString();
         }
 
         [Fact]
@@ -65,6 +106,38 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
                 //CleanUp
                 session.Delete(token);
+            });
+        }
+
+        [Fact]
+        public async Task VerifyJsonCodeDataStructure()
+        {
+            // Setup
+            var testKey = Guid.NewGuid().ToString();
+            var testCode = ObjectCreator.GetTokenHandle();
+            var expected = GetJsonCodeFromRefreshToken(testCode);
+
+            await sut.StoreAsync(testKey, testCode);
+
+            Token token = default;
+
+            ExecuteInTransaction(session =>
+            {
+                //Act
+                token = session
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.TokenHandle);
+
+                //Assert
+                Assert.NotNull(token);
+                Assert.Equal(expected, token.JsonCode);
+            });
+
+            //CleanUp
+            ExecuteInTransaction(session =>
+            {
+                session.Delete(token);
+                session.Clear();
             });
         }
 

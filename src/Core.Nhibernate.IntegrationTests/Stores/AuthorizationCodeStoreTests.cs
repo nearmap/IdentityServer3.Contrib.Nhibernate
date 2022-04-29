@@ -26,6 +26,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
@@ -63,6 +64,59 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 TokenType = TokenType.AuthorizationCode
             };
 
+        private string GetJsonCodeFromAuthorizationCode(AuthorizationCode code)
+        {
+            var jsonBuilder = new StringBuilder();
+
+            jsonBuilder.Append("{");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.fffffffzzz}\",");
+            jsonBuilder.Append("\"Client\":{");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\"");
+            jsonBuilder.Append("},");
+            jsonBuilder.Append("\"Subject\":{");
+            jsonBuilder.Append($"\"AuthenticationType\":null,");
+            jsonBuilder.Append("\"Claims\":[");
+            foreach (var claim in code.Subject.Claims)
+            {
+                jsonBuilder.Append("{");
+                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
+                jsonBuilder.Append("}");
+            }
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("},");
+	        jsonBuilder.Append($"\"IsOpenId\":{code.IsOpenId.ToString().ToLowerInvariant()},");
+            jsonBuilder.Append("\"RequestedScopes\":[");
+            foreach(var reqScope in code.RequestedScopes)
+            {
+                jsonBuilder.Append("{");
+                jsonBuilder.Append($"\"Name\":\"{reqScope.Name}\"");
+                jsonBuilder.Append("},");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("],");
+            jsonBuilder.Append($"\"RedirectUri\":\"{code.RedirectUri}\",");
+            jsonBuilder.Append($"\"Nonce\":\"{code.Nonce}\",");
+            jsonBuilder.Append($"\"WasConsentShown\":{code.WasConsentShown.ToString().ToLowerInvariant()},");
+            jsonBuilder.Append($"\"SessionId\":\"{code.SessionId}\",");
+            jsonBuilder.Append($"\"CodeChallenge\":\"{code.CodeChallenge}\",");
+            jsonBuilder.Append($"\"CodeChallengeMethod\":\"{code.CodeChallengeMethod}\",");
+            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
+            jsonBuilder.Append("\"Scopes\":[");
+            foreach(var scope in code.Scopes)
+            {
+                jsonBuilder.Append($"\"{scope}\",");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("}");
+
+            return jsonBuilder.ToString();
+        }
+
         [Fact]
         public async Task StoreAsync()
         {
@@ -80,6 +134,34 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
                 //CleanUp
                 session.Delete(token);
+            });
+        }
+
+        [Fact]
+        public async Task VerifyJsonCodeDataStructure()
+        {
+            // Setup
+            var expected = GetJsonCodeFromAuthorizationCode(testCode);
+
+            await sut.StoreAsync(testKey, testCode);
+
+            ExecuteInTransaction(session =>
+            {
+                //Act
+                var token = session
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.AuthorizationCode);
+
+                //Assert
+                Assert.NotNull(token);
+                Assert.Equal(expected, token.JsonCode);
+            });
+
+            //CleanUp
+            ExecuteInTransaction(session =>
+            {
+                session.Delete(nhCode);
+                session.Clear();
             });
         }
 

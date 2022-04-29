@@ -26,6 +26,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
@@ -63,6 +64,75 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 TokenType = TokenType.RefreshToken
             };
 
+        private string GetJsonCodeFromRefreshToken(RefreshToken code)
+        {
+            var jsonBuilder = new StringBuilder();
+
+            jsonBuilder.Append("{");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz")}\",");
+            jsonBuilder.Append($"\"LifeTime\":{code.LifeTime},");
+            jsonBuilder.Append("\"AccessToken\":{");
+            jsonBuilder.Append($"\"Audience\":\"{code.AccessToken.Audience}\",");
+            jsonBuilder.Append($"\"Issuer\":\"{code.AccessToken.Issuer}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.AccessToken.CreationTime:yyyy-MM-ddTHH:mm:ss.fffffffzzz}\",");
+            jsonBuilder.Append($"\"Lifetime\":{code.AccessToken.Lifetime},");
+            jsonBuilder.Append($"\"Type\":\"{code.AccessToken.Type}\",");
+            jsonBuilder.Append("\"Client\":{");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\"");
+            jsonBuilder.Append("},");
+            jsonBuilder.Append("\"Claims\":[");
+            
+            foreach(var accesTokenClaim in code.AccessToken.Claims)
+            {
+                jsonBuilder.Append("{");
+                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Value\":\"{accesTokenClaim.Value}\"");
+                jsonBuilder.Append("},");
+            }
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("],");
+            jsonBuilder.Append($"\"Version\":{code.AccessToken.Version},");
+            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
+            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
+            jsonBuilder.Append("\"Scopes\":[");
+            foreach (var scope in code.AccessToken.Scopes)
+            {
+                jsonBuilder.Append($"\"{scope}\",");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("},");
+            jsonBuilder.Append("\"Subject\":{");
+            jsonBuilder.Append($"\"AuthenticationType\":null,");
+            jsonBuilder.Append("\"Claims\":[");
+            foreach (var claim in code.Subject.Claims)
+            {
+                jsonBuilder.Append("{");
+                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
+                jsonBuilder.Append("},");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("},");
+            jsonBuilder.Append($"\"Version\":{code.Version},");
+            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
+            jsonBuilder.Append("\"Scopes\":[");
+            foreach (var scope in code.Scopes)
+            {
+                jsonBuilder.Append($"\"{scope}\",");
+            }
+            // Remove the final comma appended above if it exists
+            RemoveTrailingComma(jsonBuilder);
+            jsonBuilder.Append("]");
+            jsonBuilder.Append("}");
+
+            return jsonBuilder.ToString();
+        }
+
         [Fact]
         public async Task StoreAsync()
         {
@@ -81,6 +151,34 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
                 //CleanUp
                 session.Delete(token);
+            });
+        }
+
+        [Fact]
+        public async Task VerifyJsonCodeDataStructure()
+        {
+            // Setup
+            var expected = GetJsonCodeFromRefreshToken(testCode);
+
+            await sut.StoreAsync(testKey, testCode);
+
+            ExecuteInTransaction(session =>
+            {
+                //Act
+                var token = session
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.RefreshToken);
+
+                //Assert
+                Assert.NotNull(token);
+                Assert.Equal(expected, token.JsonCode);
+            });
+
+            //CleanUp
+            ExecuteInTransaction(session =>
+            {
+                session.Delete(tokenHandle);
+                session.Clear();
             });
         }
 

@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using FluentNHibernate.Cfg;
@@ -68,6 +69,14 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             _readSession = NhSessionFactory.OpenSession();
             Session = NhSessionFactory.OpenSession();
+        }
+
+        protected void RemoveTrailingComma(StringBuilder jsonBuilder)
+        {
+            if (jsonBuilder[jsonBuilder.Length - 1] == ',')
+            {
+                jsonBuilder.Remove(jsonBuilder.Length - 1, 1);
+            }
         }
 
         private ISessionFactory GetNHibernateSessionFactory()
