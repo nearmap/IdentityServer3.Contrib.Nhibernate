@@ -41,23 +41,28 @@ namespace Core.Nhibernate.IntegrationTests
         private static readonly IFixture AFixture = new Fixture()
             .Customize(new AutoMoqCustomization());
 
-        public static AuthorizationCode GetAuthorizationCode(string subjectId = null, string clientId = null)
+        public static AuthorizationCode GetAuthorizationCode(ClaimsPrincipal subject, Client client, IEnumerable<Scope> scopes)
         {
             var codeBuilder = AFixture.Build<AuthorizationCode>()
                 .Without(ac => ac.Client)
                 .Without(ac => ac.Subject)
+                .Without(ac => ac.RequestedScopes)
                 .Without(ac => ac.CodeChallengeMethod);
 
             var code = codeBuilder.Create();
 
-            code.Client = GetClient(clientId);
-            code.Subject = GetSubject(subjectId);
+            code.Client = client;
+            code.Subject = subject;
+            code.RequestedScopes = scopes;
             code.CodeChallengeMethod = Constants.CodeChallengeMethods.Plain;
 
             return code;
         }
 
         public static Token GetTokenHandle(string subjectId = null, string clientId = null)
+            => GetTokenHandle(GetClient(clientId), subjectId);
+
+        public static Token GetTokenHandle(Client client, string subjectId = null)
         {
             var tokenBuilder = AFixture.Build<Token>()
                 .Without(t => t.Client)
@@ -68,7 +73,7 @@ namespace Core.Nhibernate.IntegrationTests
 
             var token = tokenBuilder.Create();
 
-            token.Client = GetClient(clientId);
+            token.Client = client;
 
             return token;
         }
@@ -103,11 +108,14 @@ namespace Core.Nhibernate.IntegrationTests
             return token;
         }
 
-        private static ClaimsPrincipal GetSubject(string subjectId = null)
+        public static ClaimsPrincipal GetSubject(string subjectId = null)
         {
-            var claimsIdentity = new ClaimsIdentity();
+            var claimsIdentity = new ClaimsIdentity(
+                authenticationType: "test",
+                nameType: Constants.ClaimTypes.Name, 
+                roleType: Constants.ClaimTypes.Role);
             claimsIdentity.AddClaim(new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString()));
-
+            
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
             return claimsPrincipal;

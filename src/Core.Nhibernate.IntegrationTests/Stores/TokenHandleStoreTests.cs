@@ -28,10 +28,13 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using Xunit;
+
+using TokenModel = IdentityServer3.Core.Models.Token;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -41,17 +44,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public TokenHandleStoreTests()
         {
-            sut = new TokenHandleStore(Session, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+            sut = new TokenHandleStore(Session, ScopeStore, ClientStore, Mapper);
         }
 
-        private string GetJsonCodeFromRefreshToken(IdentityServer3.Core.Models.Token code)
+        private string GetJsonCodeFromRefreshToken(TokenModel code)
         {
             var jsonBuilder = new StringBuilder();
 
             jsonBuilder.Append("{");
             jsonBuilder.Append($"\"Audience\":\"{code.Audience}\",");
             jsonBuilder.Append($"\"Issuer\":\"{code.Issuer}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.fffffffzzz}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
             jsonBuilder.Append($"\"Lifetime\":{code.Lifetime},");
             jsonBuilder.Append($"\"Type\":\"{code.Type}\",");
             jsonBuilder.Append("\"Client\":{");
@@ -98,7 +101,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 //Assert
                 var token = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                    .SingleOrDefault(t =>
                     t.TokenType == TokenType.TokenHandle &&
                     t.Key == testKey);
 
@@ -147,8 +150,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAsync()
         {
             //Arrange
+            var testClient = SetupClient();
+
             var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetTokenHandle();
+            var testCode = ObjectCreator.GetTokenHandle(client: testClient);
 
             var tokenHandle = new Token
             {
@@ -160,8 +165,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 TokenType = TokenType.TokenHandle
             };
 
-            SetupScopeStoreMock();
-
             ExecuteInTransaction(session =>
             {
                 session.Save(tokenHandle);
@@ -171,7 +174,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var token = await sut.GetAsync(testKey);
 
             //Assert
-            Assert.NotNull(token);
+            token.Should().BeOfType<TokenModel>()
+                .And.BeEquivalentTo(testCode,
+                options => options.Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should()
+                        .BeCloseTo(ctx.Expectation, new TimeSpan(0, 0, 1)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
             ExecuteInTransaction(session =>
@@ -210,7 +218,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 //Assert
                 var token = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                    .SingleOrDefault(t =>
                     t.TokenType == TokenType.TokenHandle &&
                     t.Key == testKey);
 
@@ -222,11 +230,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
+            var testClient = SetupClient();
+
             var subjectId1 = Guid.NewGuid().ToString();
             var subjectId2 = Guid.NewGuid().ToString();
 
             var testKey1 = Guid.NewGuid().ToString();
-            var testCode1 = ObjectCreator.GetTokenHandle(subjectId1);
+            var testCode1 = ObjectCreator.GetTokenHandle(testClient, subjectId1);
             var tokenHandle1 = new Token
             {
                 Key = testKey1,
@@ -238,7 +248,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             };
 
             var testKey2 = Guid.NewGuid().ToString();
-            var testCode2 = ObjectCreator.GetTokenHandle(subjectId1);
+            var testCode2 = ObjectCreator.GetTokenHandle(testClient, subjectId1);
             var tokenHandle2 = new Token
             {
                 Key = testKey2,
@@ -250,7 +260,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             };
 
             var testKey3 = Guid.NewGuid().ToString();
-            var testCode3 = ObjectCreator.GetTokenHandle(subjectId2);
+            var testCode3 = ObjectCreator.GetTokenHandle(testClient, subjectId2);
             var tokenHandle3 = new Token
             {
                 Key = testKey3,
@@ -262,7 +272,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             };
 
             var testKey4 = Guid.NewGuid().ToString();
-            var testCode4 = ObjectCreator.GetTokenHandle(subjectId2);
+            var testCode4 = ObjectCreator.GetTokenHandle(testClient, subjectId2);
             var tokenHandle4 = new Token
             {
                 Key = testKey4,
@@ -272,8 +282,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Expiry = DateTime.UtcNow.AddSeconds(testCode4.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
-
-            SetupScopeStoreMock();
 
             ExecuteInTransaction(session =>
             {
@@ -287,8 +295,15 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var tokens = (await sut.GetAllAsync(subjectId1)).ToList();
 
             //Assert
-            Assert.True(tokens.Count == 2);
-            Assert.True(tokens.All(t => t.SubjectId == subjectId1));
+            tokens.Should().HaveCount(2)
+                .And.AllBeOfType<TokenModel>()
+                .And.BeEquivalentTo(
+                    new[] { testCode1, testCode2 },
+                    options => options.Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should()
+                        .BeCloseTo(ctx.Expectation, new TimeSpan(0, 0, 1)))
+                    .WhenTypeIs<DateTimeOffset>())
+                ;
 
             //CleanUp
             ExecuteInTransaction(session =>
@@ -346,12 +361,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             {
                 //Assert
                 var tokenRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                    .SingleOrDefault(t =>
                     t.TokenType == TokenType.TokenHandle &&
                     t.Key == testKeyToRevoke);
 
                 var tokenNotRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                    .SingleOrDefault(t =>
                     t.TokenType == TokenType.TokenHandle &&
                     t.Key == testKey);
 

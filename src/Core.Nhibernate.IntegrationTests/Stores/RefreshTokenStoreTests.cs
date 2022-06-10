@@ -48,7 +48,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public RefreshTokenStoreTests()
         {
-            sut = new RefreshTokenStore(Session, ScopeStoreMock.Object, ClientStoreMock.Object, Mapper);
+            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, Mapper);
 
             tokenHandle = GetToken(testKey, testCode);
         }
@@ -70,12 +70,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             jsonBuilder.Append("{");
             jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz")}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
             jsonBuilder.Append($"\"LifeTime\":{code.LifeTime},");
             jsonBuilder.Append("\"AccessToken\":{");
             jsonBuilder.Append($"\"Audience\":\"{code.AccessToken.Audience}\",");
             jsonBuilder.Append($"\"Issuer\":\"{code.AccessToken.Issuer}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.AccessToken.CreationTime:yyyy-MM-ddTHH:mm:ss.fffffffzzz}\",");
+            jsonBuilder.Append($"\"CreationTime\":\"{code.AccessToken.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
             jsonBuilder.Append($"\"Lifetime\":{code.AccessToken.Lifetime},");
             jsonBuilder.Append($"\"Type\":\"{code.AccessToken.Type}\",");
             jsonBuilder.Append("\"Client\":{");
@@ -105,7 +105,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             jsonBuilder.Append("]");
             jsonBuilder.Append("},");
             jsonBuilder.Append("\"Subject\":{");
-            jsonBuilder.Append($"\"AuthenticationType\":null,");
+            jsonBuilder.Append($"\"AuthenticationType\":\"{code.Subject.Identity.AuthenticationType}\",");
             jsonBuilder.Append("\"Claims\":[");
             foreach (var claim in code.Subject.Claims)
             {
@@ -188,8 +188,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAsync()
         {
             //Arrange
-            SetupScopeStoreMock();
-
             ExecuteInTransaction(session =>
             {
                 session.SaveOrUpdate(tokenHandle);
@@ -243,8 +241,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var tokenHandle2 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId1));
             var tokenHandle3 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId2));
             var tokenHandle4 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId2));
-
-            SetupScopeStoreMock();
 
             ExecuteInTransaction(session =>
             {

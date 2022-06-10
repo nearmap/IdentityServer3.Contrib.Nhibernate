@@ -28,21 +28,23 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using AutoMapper;
 using FluentNHibernate.Cfg;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.Serialization;
+using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
-using Moq;
 using Newtonsoft.Json;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
 using Configuration = NHibernate.Cfg.Configuration;
+using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using ClientModel = IdentityServer3.Core.Models.Client;
+using ScopeEntity = IdentityServer3.Contrib.Nhibernate.Entities.Scope;
+using ScopeModel = IdentityServer3.Core.Models.Scope;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -54,8 +56,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         protected ISession Session { get; }
         private readonly ISession _readSession;
 
-        protected readonly Mock<IScopeStore> ScopeStoreMock = new Mock<IScopeStore>();
-        protected readonly Mock<IClientStore> ClientStoreMock = new Mock<IClientStore>();
+        protected readonly IScopeStore ScopeStore;
+        protected readonly IClientStore ClientStore;
 
         protected BaseStoreTests()
         {
@@ -69,6 +71,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             _readSession = NhSessionFactory.OpenSession();
             Session = NhSessionFactory.OpenSession();
+
+            ScopeStore = new ScopeStore(Session, Mapper);
+            ClientStore = new ClientStore(Session, Mapper);
         }
 
         protected void RemoveTrailingComma(StringBuilder jsonBuilder)
@@ -140,8 +145,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var settings = new JsonSerializerSettings();
             settings.Converters.Add(new ClaimConverter());
             settings.Converters.Add(new ClaimsPrincipalConverter());
-            settings.Converters.Add(new ClientConverter(ClientStoreMock.Object));
-            settings.Converters.Add(new ScopeConverter(ScopeStoreMock.Object));
+            settings.Converters.Add(new ClientConverter(ClientStore));
+            settings.Converters.Add(new ScopeConverter(ScopeStore));
             return settings;
         }
 
@@ -155,14 +160,31 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             return JsonConvert.DeserializeObject<T>(json, GetJsonSerializerSettings());
         }
 
-        protected virtual void SetupScopeStoreMock()
+        protected ClientModel SetupClient(string clientId = null)
         {
-            ScopeStoreMock.Setup(st => st.FindScopesAsync(It.IsAny<IEnumerable<string>>()))
-                .Returns((IEnumerable<string> scopeNames) =>
+            var testClient = ObjectCreator.GetClient(clientId);
+
+            ExecuteInTransaction(session =>
+            {
+                session.Save(Mapper.Map<ClientEntity>(testClient));
+            });
+
+            return testClient;
+        }
+
+        protected IEnumerable<ScopeModel> SetupScopes(int count)
+        {
+            var scopes = ObjectCreator.GetScopes(count);
+
+            ExecuteInTransaction(session =>
+            {
+                foreach(var scope in scopes)
                 {
-                    return Task.FromResult(
-                        scopeNames.Select(s => new Scope { Name = s, DisplayName = s }));
-                });
+                    session.Save(Mapper.Map<ScopeEntity>(scope));
+                }
+            });
+
+            return scopes;
         }
     }
 }
