@@ -105,7 +105,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.TokenHandle &&
                     t.Key == testKey);
 
-                Assert.NotNull(token);
+                token.Should().BeEquivalentTo(
+                    Mapper.Map<Token>(testCode),
+                    options => options
+                        .Excluding(x => x.Key)
+                        .Excluding(x => x.Expiry)
+                        .Excluding(x => x.JsonCode)
+                        .Excluding(x => x.TokenType)
+                        .Excluding(x => x.Id));
+                token.Key.Should().Be(testKey);
+                token.Expiry.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.Lifetime), new TimeSpan(0, 1, 0));
+                token.TokenType.Should().Be(TokenType.TokenHandle);
 
                 //CleanUp
                 session.Delete(token);
@@ -132,8 +142,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.TokenHandle);
 
                 //Assert
-                Assert.NotNull(token);
-                Assert.Equal(expected, token.JsonCode);
+                token.Should().NotBeNull();
+                token.JsonCode.Should().Be(expected);
             });
 
             //CleanUp
@@ -208,7 +218,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             ExecuteInTransaction(session =>
             {
                 session.Save(tokenHandle);
-
             });
 
             //Act
@@ -219,10 +228,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 //Assert
                 var token = session.Query<Token>()
                     .SingleOrDefault(t =>
-                    t.TokenType == TokenType.TokenHandle &&
-                    t.Key == testKey);
+                        t.TokenType == TokenType.TokenHandle &&
+                        t.Key == testKey);
 
-                Assert.Null(token);
+                token.Should().BeNull();
             });
         }
 
@@ -362,16 +371,16 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 //Assert
                 var tokenRevoked = session.Query<Token>()
                     .SingleOrDefault(t =>
-                    t.TokenType == TokenType.TokenHandle &&
-                    t.Key == testKeyToRevoke);
+                        t.TokenType == TokenType.TokenHandle &&
+                        t.Key == testKeyToRevoke);
 
                 var tokenNotRevoked = session.Query<Token>()
                     .SingleOrDefault(t =>
-                    t.TokenType == TokenType.TokenHandle &&
-                    t.Key == testKey);
+                        t.TokenType == TokenType.TokenHandle &&
+                        t.Key == testKey);
 
-                Assert.Null(tokenRevoked);
-                Assert.NotNull(tokenNotRevoked);
+                tokenRevoked.Should().BeNull();
+                tokenNotRevoked.Should().BeEquivalentTo(tokenHandle);
 
                 //CleanUp
                 session.Delete(tokenNotRevoked);

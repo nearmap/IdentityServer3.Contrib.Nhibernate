@@ -136,7 +136,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 var token = session.Query<Token>()
                     .SingleOrDefault(t => t.TokenType == TokenType.AuthorizationCode && t.Key == testKey);
 
-                Assert.NotNull(token);
+                token.Should().NotBeNull();
+                token.TokenType.Should().Be(TokenType.AuthorizationCode);
+                token.Key.Should().Be(testKey);
+                token.ClientId.Should().Be(testCode.ClientId);
 
                 //CleanUp
                 session.Delete(token);
@@ -159,8 +162,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.AuthorizationCode);
 
                 //Assert
-                Assert.NotNull(token);
-                Assert.Equal(expected, token.JsonCode);
+                token.Should().NotBeNull();
+                token.JsonCode.Should().BeEquivalentTo(expected);
             });
 
             //CleanUp
@@ -221,7 +224,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.AuthorizationCode &&
                     t.Key == testKey);
 
-                Assert.Null(token);
+                token.Should().BeNull();
             });
         }
 
@@ -311,8 +314,15 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.AuthorizationCode &&
                     t.Key == testKey);
 
-                Assert.Null(tokenRevoked);
-                Assert.NotNull(tokenNotRevoked);
+                tokenRevoked.Should().BeNull();
+                tokenNotRevoked.Should().BeOfType<Token>()
+                    .Subject.Should().BeEquivalentTo(
+                    nhCode,
+                    options => options
+                        .IgnoringCyclicReferences()
+                        .Using<DateTimeOffset>(
+                            ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                        .WhenTypeIs<DateTimeOffset>());
 
                 //CleanUp
                 session.Delete(tokenNotRevoked);

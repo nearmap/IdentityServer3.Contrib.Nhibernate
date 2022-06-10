@@ -25,6 +25,7 @@
 
 using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using Xunit;
@@ -63,9 +64,7 @@ namespace Core.Nhibernate.Tests
 
             foreach (var operationalServicesEntity in _operationalServicesEntities)
             {
-                var map = mappings.FindMapping(operationalServicesEntity);
-
-                Assert.NotNull(map);
+                mappings.FindMapping(operationalServicesEntity).Should().NotBeNull();
             }
         }
 
@@ -77,9 +76,7 @@ namespace Core.Nhibernate.Tests
 
             foreach (var configurationServicesEntity in _configurationServicesEntities)
             {
-                var map = mappings.FindMapping(configurationServicesEntity);
-
-                Assert.NotNull(map);
+                mappings.FindMapping(configurationServicesEntity).Should().NotBeNull();
             }
         }
     }

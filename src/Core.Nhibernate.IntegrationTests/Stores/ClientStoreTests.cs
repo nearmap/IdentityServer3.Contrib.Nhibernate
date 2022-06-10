@@ -26,8 +26,8 @@
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 
@@ -44,7 +44,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly ClientEntity testClient2Entity;
         private readonly ClientEntity testClient3Entity;
 
-        private readonly string _clientIdToFind = "ClientIdToFind";
         private bool disposedValue;
 
         public ClientStoreTests()
@@ -67,7 +66,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task FindClientByIdAsync()
         {
             //Arrange
-            var testClientToFind = ObjectCreator.GetClient(_clientIdToFind);
+            var testClientToFind = ObjectCreator.GetClient();
             var testClientToFindEntity = Mapper.Map<ClientModel, ClientEntity>(testClientToFind);
 
             ExecuteInTransaction(session =>
@@ -76,11 +75,16 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             });
 
             //Act
-            var result = await sut.FindClientByIdAsync(_clientIdToFind);
+            var result = await sut.FindClientByIdAsync(testClientToFind.ClientId);
 
             //Assert
-            Assert.NotNull(result);
-            Assert.Equal(_clientIdToFind, result.ClientId);
+            result.Should().BeEquivalentTo(
+                testClientToFind,
+                options => options
+                    .IgnoringCyclicReferences()
+                    .Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
             ExecuteInTransaction(session =>

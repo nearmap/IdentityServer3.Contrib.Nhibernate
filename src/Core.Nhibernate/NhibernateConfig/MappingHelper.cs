@@ -28,7 +28,7 @@ using IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
-    public class MappingHelper
+    public static class MappingHelper
     {
         public static AutoPersistenceModel GetNhibernateServicesMappings(bool registerOperationalServices, bool registerConfigurationServices)
         {

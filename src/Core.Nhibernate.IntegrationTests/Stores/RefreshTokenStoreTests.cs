@@ -28,6 +28,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
@@ -43,11 +44,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly IRefreshTokenStore sut;
 
         private readonly string testKey = Guid.NewGuid().ToString();
-        private readonly RefreshToken testCode = ObjectCreator.GetRefreshToken();
+        private readonly RefreshToken testCode;
         private readonly Token tokenHandle;
 
         public RefreshTokenStoreTests()
         {
+            var client = SetupClient();
+            testCode = ObjectCreator.GetRefreshToken(client);
             sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, Mapper);
 
             tokenHandle = GetToken(testKey, testCode);
@@ -86,7 +89,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             foreach(var accesTokenClaim in code.AccessToken.Claims)
             {
                 jsonBuilder.Append("{");
-                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Type\":\"{accesTokenClaim.Type}\",");
                 jsonBuilder.Append($"\"Value\":\"{accesTokenClaim.Value}\"");
                 jsonBuilder.Append("},");
             }
@@ -110,7 +113,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             foreach (var claim in code.Subject.Claims)
             {
                 jsonBuilder.Append("{");
-                jsonBuilder.Append("\"Type\":\"sub\",");
+                jsonBuilder.Append($"\"Type\":\"{claim.Type}\",");
                 jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
                 jsonBuilder.Append("},");
             }
@@ -147,7 +150,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
-                Assert.NotNull(token);
+                token.Should().BeEquivalentTo(
+                    Mapper.Map<Token>(testCode),
+                    options => options
+                        .Excluding(x => x.Key)
+                        .Excluding(x => x.Expiry)
+                        .Excluding(x => x.JsonCode)
+                        .Excluding(x => x.TokenType)
+                        .Excluding(x => x.Id));
+                token.Key.Should().Be(testKey);
+                token.Expiry.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.LifeTime), new TimeSpan(0, 1, 0));
+                token.TokenType.Should().Be(TokenType.RefreshToken);
 
                 //CleanUp
                 session.Delete(token);
@@ -170,8 +183,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.RefreshToken);
 
                 //Assert
-                Assert.NotNull(token);
-                Assert.Equal(expected, token.JsonCode);
+                token.JsonCode.Should().Be(expected);
             });
 
             //CleanUp
@@ -197,7 +209,14 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var resultToken = await sut.GetAsync(testKey);
 
             //Assert
-            Assert.NotNull(resultToken);
+            resultToken.Should().BeOfType<RefreshToken>()
+                .Subject.Should().BeEquivalentTo(
+                testCode,
+                options => options
+                    .IgnoringCyclicReferences()
+                    .Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
             ExecuteInTransaction(session =>
@@ -226,7 +245,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
-                Assert.Null(token);
+                token.Should().BeNull();
             });
         }
 
@@ -234,13 +253,19 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
+            var client = SetupClient();
             var subjectId1 = GetNewGuidString();
             var subjectId2 = GetNewGuidString();
 
-            var tokenHandle1 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId1));
-            var tokenHandle2 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId1));
-            var tokenHandle3 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId2));
-            var tokenHandle4 = GetToken(GetNewGuidString(), ObjectCreator.GetRefreshToken(subjectId2));
+            var refreshToken1 = ObjectCreator.GetRefreshToken(client, subjectId1);
+            var refreshToken2 = ObjectCreator.GetRefreshToken(client, subjectId1);
+            var refreshToken3 = ObjectCreator.GetRefreshToken(client, subjectId2);
+            var refreshToken4 = ObjectCreator.GetRefreshToken(client, subjectId2);
+
+            var tokenHandle1 = GetToken(GetNewGuidString(), refreshToken1);
+            var tokenHandle2 = GetToken(GetNewGuidString(), refreshToken2);
+            var tokenHandle3 = GetToken(GetNewGuidString(), refreshToken3);
+            var tokenHandle4 = GetToken(GetNewGuidString(), refreshToken4);
 
             ExecuteInTransaction(session =>
             {
@@ -254,8 +279,15 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var tokens = (await sut.GetAllAsync(subjectId1)).ToList();
 
             //Assert
-            Assert.True(tokens.Count == 2);
-            Assert.True(tokens.All(t => t.SubjectId == subjectId1));
+            tokens.Should().HaveCount(2)
+                .And.AllBeOfType<RefreshToken>()
+                .And.BeEquivalentTo(
+                new[] { refreshToken1, refreshToken2 },
+                options => options
+                    .IgnoringCyclicReferences()
+                    .Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
             ExecuteInTransaction(session =>
@@ -273,9 +305,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             //Arrange
             var subjectIdToRevoke = GetNewGuidString();
             var clientIdToRevoke = GetNewGuidString();
+            var client = SetupClient(clientIdToRevoke);
 
             var testKeyToRevoke = GetNewGuidString();
-            var testCodeToRevoke = ObjectCreator.GetRefreshToken(subjectIdToRevoke, clientIdToRevoke);
+            var testCodeToRevoke = ObjectCreator.GetRefreshToken(client, subjectIdToRevoke);
             var tokenHandleToRevoke = GetToken(testKeyToRevoke, testCodeToRevoke);
 
             ExecuteInTransaction(session =>
@@ -300,8 +333,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
-                Assert.Null(tokenRevoked);
-                Assert.NotNull(tokenNotRevoked);
+                tokenRevoked.Should().BeNull();
+                tokenNotRevoked.Should().BeEquivalentTo(tokenHandle);
 
                 //CleanUp
                 session.Delete(tokenNotRevoked);

@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
@@ -79,9 +80,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var scopeNames = result.Select(s => s.Name).ToList();
 
             //Assert
-            Assert.Contains(testScope1.Name, scopeNames);
-            Assert.Contains(testScope2.Name, scopeNames);
-            Assert.DoesNotContain(testScope3.Name, scopeNames);
+            scopeNames.Should().BeEquivalentTo(new[] { testScope1.Name, testScope2.Name });
         }
 
         [Fact]
@@ -106,9 +105,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var scopeNames = result.Select(s => s.Name).ToList();
 
             //Assert
-            Assert.Contains(testScope1.Name, scopeNames);
-            Assert.Contains(testScope2.Name, scopeNames);
-            Assert.DoesNotContain(testScope3.Name, scopeNames);
+            scopeNames
+                .Should().Contain(testScope1.Name)
+                .And.Subject
+                .Should().Contain(testScope2.Name);
         }
 
         protected virtual void Dispose(bool disposing)

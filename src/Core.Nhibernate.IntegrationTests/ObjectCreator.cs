@@ -78,12 +78,12 @@ namespace Core.Nhibernate.IntegrationTests
             return token;
         }
 
-        public static RefreshToken GetRefreshToken(string subjectId = null, string clientId = null)
+        public static RefreshToken GetRefreshToken(Client client, string subjectId = null)
         {
             var tokenBuilder = AFixture.Build<RefreshToken>()
                 .Without(rt => rt.Subject)
                 .With(rt => rt.CreationTime, DateTime.UtcNow)
-                .With(rt => rt.AccessToken, GetAccessToken(subjectId, clientId));
+                .With(rt => rt.AccessToken, GetAccessToken(subjectId, client));
 
             var token = tokenBuilder.Create();
 
@@ -92,18 +92,18 @@ namespace Core.Nhibernate.IntegrationTests
             return token;
         }
 
-        private static Token GetAccessToken(string subjectId, string clientId)
+        private static Token GetAccessToken(string subjectId, Client client)
         {
             var tokenBuilder = AFixture.Build<Token>()
                 .Without(t => t.Client)
                 .With(t => t.Claims, new List<Claim>()
                 {
-                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString())
+                    new Claim(Constants.ClaimTypes.Subject,subjectId ?? Guid.NewGuid().ToString())
                 });
 
             var token = tokenBuilder.Create();
 
-            token.Client = GetClient(clientId);
+            token.Client = client;
 
             return token;
         }

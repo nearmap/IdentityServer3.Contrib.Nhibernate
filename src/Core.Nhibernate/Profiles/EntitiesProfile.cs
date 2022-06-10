@@ -84,6 +84,18 @@ namespace IdentityServer3.Core.Models
                     opt => opt.MapFrom(src => src.AllowedCorsOrigins.Select(x => x.Origin)))
                 .ForMember(x => x.Claims,
                     opt => opt.MapFrom(src => src.Claims.Select(x => new Claim(x.Type, x.Value))));
+
+            CreateMap<Entities.Consent, Consent>()
+                .ForMember(dest => dest.Scopes,
+                    opt => opt.MapFrom(src => src.Scopes.Split(',')));
+
+            CreateMap<Consent, Entities.Consent>()
+                .ForMember(dest => dest.Scopes,
+                    opt => opt.MapFrom(src => string.Join(",", src.Scopes)));
+
+            CreateMap<Token, Entities.Token>();
+
+            CreateMap<RefreshToken, Entities.Token>();
         }
     }
 }

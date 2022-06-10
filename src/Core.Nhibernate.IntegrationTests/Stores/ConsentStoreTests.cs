@@ -25,9 +25,11 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Services;
@@ -38,9 +40,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
     public class ConsentStoreTests : BaseStoreTests, IDisposable
     {
         private readonly IConsentStore sut;
-
-        private readonly string subjectToGet = "subject1";
-        private readonly string clientToGet = "client1";
 
         private Consent testConsent1 = ObjectCreator.GetConsent();
         private Consent testConsent2 = ObjectCreator.GetConsent();
@@ -61,8 +60,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task LoadAsync()
         {
             //Arrange
-            testConsent1 = ObjectCreator.GetConsent(clientToGet, subjectToGet);
-
             ExecuteInTransaction(session =>
             {
                 session.Save(testConsent1);
@@ -73,18 +70,16 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var result = await sut.LoadAsync(testConsent1.Subject, testConsent1.ClientId);
 
             //Assert
-            Assert.NotNull(result);
-            Assert.True(
-                result.ClientId.Equals(testConsent1.ClientId) &&
-                result.Subject.Equals(testConsent1.Subject));
+            result.Should().BeEquivalentTo(Mapper.Map<IdentityServer3.Core.Models.Consent>(testConsent1));
         }
 
         [Fact]
         public async Task LoadAllAsync()
         {
             //Arrange
-            testConsent1 = ObjectCreator.GetConsent(null, subjectToGet);
-            testConsent2 = ObjectCreator.GetConsent(null, subjectToGet);
+            var subject = Guid.NewGuid().ToString();
+            testConsent1 = ObjectCreator.GetConsent(null, subject);
+            testConsent2 = ObjectCreator.GetConsent(null, subject);
 
             ExecuteInTransaction(session =>
             {
@@ -93,12 +88,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             });
 
             //Act
-            var result = (await sut.LoadAllAsync(subjectToGet))
+            var result = (await sut.LoadAllAsync(subject))
                 .ToList();
 
             //Assert
-            Assert.NotNull(result);
-            Assert.True(result.All(c => c.Subject.Equals(subjectToGet)));
+            result.Should().BeEquivalentTo(Mapper.Map<IEnumerable<IdentityServer3.Core.Models.Consent>>(new[] { testConsent1, testConsent2 }));
         }
 
         [Fact]
@@ -122,10 +116,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             ExecuteInTransaction(session =>
             {
                 //Assert
-                var updatedEntity = session.Query<IdentityServer3.Contrib.Nhibernate.Entities.Consent>()
+                var updatedEntity = session.Query<Consent>()
                     .SingleOrDefault(c => c.ClientId == modelToUpdate.ClientId && c.Subject == modelToUpdate.Subject);
 
-                Assert.NotNull(updatedEntity);
+                updatedEntity.Should().BeEquivalentTo(
+                    Mapper.Map<Consent>(modelToUpdate),
+                    options => options.Excluding(x => x.Id));
 
                 //CleanUp
                 session.Delete(updatedEntity);
@@ -151,8 +147,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             //Assert
             var updatedModel = await sut.LoadAsync(modelToUpdate.Subject, modelToUpdate.ClientId);
 
-            Assert.NotNull(updatedModel);
-            Assert.True(updatedModel.Scopes.Count() == 5);
+            updatedModel.Should().BeEquivalentTo(
+                Mapper.Map<IdentityServer3.Core.Models.Consent>(modelToUpdate));
         }
 
         [Fact]
@@ -174,7 +170,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             //Assert
             var revokedConsent = await sut.LoadAsync(consentToRevoke.Subject, consentToRevoke.ClientId);
 
-            Assert.Null(revokedConsent);
+            revokedConsent.Should().BeNull();
         }
 
         protected virtual void Dispose(bool disposing)
