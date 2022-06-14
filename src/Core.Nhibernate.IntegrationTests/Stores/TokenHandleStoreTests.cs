@@ -35,6 +35,7 @@ using IdentityServer3.Contrib.Nhibernate.Stores;
 using Xunit;
 
 using TokenModel = IdentityServer3.Core.Models.Token;
+using TokenEntity = IdentityServer3.Contrib.Nhibernate.Models.Token;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -170,7 +171,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey,
                 SubjectId = testCode.SubjectId,
                 ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -210,7 +211,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey,
                 SubjectId = testCode.SubjectId,
                 ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -251,7 +252,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey1,
                 SubjectId = testCode1.SubjectId,
                 ClientId = testCode1.ClientId,
-                JsonCode = ConvertToJson(testCode1),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode1),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode1.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -263,7 +264,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey2,
                 SubjectId = testCode2.SubjectId,
                 ClientId = testCode2.ClientId,
-                JsonCode = ConvertToJson(testCode2),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode2),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode2.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -275,7 +276,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey3,
                 SubjectId = testCode3.SubjectId,
                 ClientId = testCode3.ClientId,
-                JsonCode = ConvertToJson(testCode3),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode3),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode3.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -287,7 +288,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey4,
                 SubjectId = testCode4.SubjectId,
                 ClientId = testCode4.ClientId,
-                JsonCode = ConvertToJson(testCode4),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode4),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode4.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -339,7 +340,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKey,
                 SubjectId = testCode.SubjectId,
                 ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCode),
                 Expiry = DateTime.UtcNow.AddSeconds(testCode.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };
@@ -352,7 +353,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = testKeyToRevoke,
                 SubjectId = testCodeToRevoke.SubjectId,
                 ClientId = testCodeToRevoke.ClientId,
-                JsonCode = ConvertToJson(testCodeToRevoke),
+                JsonCode = ConvertToJson<TokenModel, TokenEntity>(testCodeToRevoke),
                 Expiry = DateTime.UtcNow.AddSeconds(testCodeToRevoke.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.TokenHandle
             };

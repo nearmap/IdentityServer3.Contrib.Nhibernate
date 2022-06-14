@@ -36,6 +36,7 @@ using IdentityServer3.Core.Services;
 using Xunit;
 
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using RefreshTokenEntity = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -62,7 +63,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = key,
                 SubjectId = token.SubjectId,
                 ClientId = token.ClientId,
-                JsonCode = ConvertToJson(token),
+                JsonCode = ConvertToJson<RefreshToken, RefreshTokenEntity>(token),
                 Expiry = token.CreationTime.UtcDateTime.AddSeconds(token.LifeTime),
                 TokenType = TokenType.RefreshToken
             };

@@ -191,10 +191,6 @@
   <ItemGroup>
     <Compile Include="ObjectCreator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Serialization\ClaimConverter.cs" />
-    <Compile Include="Serialization\ClaimsPrincipalConverter.cs" />
-    <Compile Include="Serialization\ClientConverter.cs" />
-    <Compile Include="Serialization\ScopeConverter.cs" />
     <Compile Include="Stores\AuthorizationCodeStoreTests.cs" />
     <Compile Include="Stores\BaseStoreTests.cs" />
     <Compile Include="Stores\ClientStoreTests.cs" />

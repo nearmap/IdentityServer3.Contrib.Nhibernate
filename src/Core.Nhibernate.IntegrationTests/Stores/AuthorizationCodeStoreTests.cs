@@ -35,6 +35,7 @@ using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using AuthorizationCodeEntity = IdentityServer3.Contrib.Nhibernate.Models.AuthorizationCode;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -66,7 +67,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 Key = key,
                 SubjectId = code.SubjectId,
                 ClientId = code.ClientId,
-                JsonCode = ConvertToJson(code),
+                JsonCode = ConvertToJson<AuthorizationCode, AuthorizationCodeEntity>(code),
                 Expiry = DateTime.UtcNow.AddSeconds(code.Client.AuthorizationCodeLifetime),
                 TokenType = TokenType.AuthorizationCode
             };

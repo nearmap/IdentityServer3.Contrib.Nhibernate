@@ -31,7 +31,6 @@ using System.Data;
 using System.Text;
 using AutoMapper;
 using FluentNHibernate.Cfg;
-using Core.Nhibernate.IntegrationTests.Serialization;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.Stores;
@@ -140,24 +139,20 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected string GetNewGuidString() => Guid.NewGuid().ToString();
 
-        private JsonSerializerSettings GetJsonSerializerSettings()
-        {
-            var settings = new JsonSerializerSettings();
-            settings.Converters.Add(new ClaimConverter());
-            settings.Converters.Add(new ClaimsPrincipalConverter());
-            settings.Converters.Add(new ClientConverter(ClientStore));
-            settings.Converters.Add(new ScopeConverter(ScopeStore));
-            return settings;
-        }
+        protected static JsonSerializerSettings SerializerSettings
+            => new JsonSerializerSettings()
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
 
-        protected string ConvertToJson<T>(T value)
+        protected string ConvertToJson<T, TEntity>(T value)
         {
-            return JsonConvert.SerializeObject(value, GetJsonSerializerSettings());
+            return JsonConvert.SerializeObject(Mapper.Map<TEntity>(value), SerializerSettings);
         }
 
         protected T ConvertFromJson<T>(string json)
         {
-            return JsonConvert.DeserializeObject<T>(json, GetJsonSerializerSettings());
+            return JsonConvert.DeserializeObject<T>(json, SerializerSettings);
         }
 
         protected ClientModel SetupClient(string clientId = null)
