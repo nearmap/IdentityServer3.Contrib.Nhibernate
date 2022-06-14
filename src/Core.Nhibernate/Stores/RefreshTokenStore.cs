@@ -29,8 +29,14 @@ using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
+using Newtonsoft.Json;
 using NHibernate;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using RefToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
+using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using IdentityServer3.Core;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
@@ -40,6 +46,80 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             : base(session, TokenType.RefreshToken, scopeStore, clientStore, mapper)
         {
 
+        }
+
+        public override Task<RefreshToken> GetAsync(string key)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var token = session
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+
+                if (token == null)
+                {
+                    return null;
+                }
+
+                var refToken = ConvertFromJson<RefToken>(token.JsonCode);
+
+                var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
+
+                if (refreshToken == null)
+                {
+                    return null;
+                }
+
+                refreshToken.AccessToken.Client = ClientStore.FindClientByIdAsync(refToken.ClientId).Result;
+
+                var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+                refreshToken.Subject = new ClaimsPrincipal(
+                    new ClaimsIdentity(
+                        claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+                return refreshToken;
+            });
+
+            return Task.FromResult(toReturn);
+        }
+
+        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var tokens = session.Query<Token>()
+                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                    .ToList();
+
+                if (!tokens.Any()) return new List<ITokenMetadata>();
+
+                var tokenList = new List<ITokenMetadata>();
+
+                foreach (var token in tokens)
+                {
+                    var refToken = ConvertFromJson<RefToken>(token.JsonCode);
+
+                    var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
+
+                    if (refreshToken == null)
+                    {
+                        continue;
+                    }
+
+                    refreshToken.AccessToken.Client = ClientStore.FindClientByIdAsync(refToken.ClientId).Result;
+
+                    var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+                    refreshToken.Subject = new ClaimsPrincipal(
+                        new ClaimsIdentity(
+                            claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+                    tokenList.Add(refreshToken);
+                }
+
+                return tokenList;
+            });
+
+            return toReturn;
         }
 
         public override async Task StoreAsync(string key, RefreshToken value)
@@ -63,7 +143,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     session.Save(token);
                 }
 
-                token.JsonCode = ConvertToJson(value);
+                token.JsonCode = ConvertToJson<RefToken>(value);
                 token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
 
                 session.Update(token);

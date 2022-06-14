@@ -4,21 +4,21 @@ using System.Security.Claims;
 using IdentityServer3.Core;
 using Newtonsoft.Json;
 
-namespace IdentityServer3.Contrib.Nhibernate.Serialization
+namespace Core.Nhibernate.IntegrationTests.Serialization
 {
-    public class ClaimsPrincipalLite
+    internal class ClaimsPrincipalLite
     {
         public string AuthenticationType { get; set; }
         public ClaimLite[] Claims { get; set; }
     }
 
-    public class ClaimLite
+    internal class ClaimLite
     {
         public string Type { get; set; }
         public string Value { get; set; }
     }
 
-    public class ClaimsPrincipalConverter : JsonConverter
+    internal class ClaimsPrincipalConverter : JsonConverter
     {
         public override bool CanConvert(Type objectType)
         {

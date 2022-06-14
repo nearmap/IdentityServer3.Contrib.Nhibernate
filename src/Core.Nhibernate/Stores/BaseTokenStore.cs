@@ -25,11 +25,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
-using IdentityServer3.Contrib.Nhibernate.Serialization;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
@@ -38,7 +36,8 @@ using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
-    public abstract class BaseTokenStore<T> : NhibernateStore where T : class
+    public abstract class BaseTokenStore<T> : NhibernateStore 
+        where T : class
     {
         protected readonly TokenType TokenType;
         protected readonly IScopeStore ScopeStore;
@@ -52,41 +51,23 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             TokenType = tokenType;
         }
 
-        JsonSerializerSettings GetJsonSerializerSettings()
-        {
-            var settings = new JsonSerializerSettings();
-            settings.Converters.Add(new ClaimConverter());
-            settings.Converters.Add(new ClaimsPrincipalConverter());
-            settings.Converters.Add(new ClientConverter(ClientStore));
-            settings.Converters.Add(new ScopeConverter(ScopeStore));
-            return settings;
-        }
-
-        protected string ConvertToJson(T value)
-        {
-            return JsonConvert.SerializeObject(value, GetJsonSerializerSettings());
-        }
-
-        protected T ConvertFromJson(string json)
-        {
-            return JsonConvert.DeserializeObject<T>(json, GetJsonSerializerSettings());
-        }
-
-        public async Task<T> GetAsync(string key)
-        {
-            var toReturn = ExecuteInTransaction(session =>
+        private JsonSerializerSettings SerializerSettings
+            =>  new JsonSerializerSettings()
             {
-                var token = session
-                    .Query<Token>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            };
 
-                return (token == null || token.Expiry < DateTime.UtcNow)
-                    ? null
-                    : ConvertFromJson(token.JsonCode);
-            });
-
-            return toReturn;
+        protected string ConvertToJson<TEntity>(T value)
+        {
+            return JsonConvert.SerializeObject(_mapper.Map<TEntity>(value), SerializerSettings);
         }
+
+        protected TEntity ConvertFromJson<TEntity>(string json)
+        {
+            return JsonConvert.DeserializeObject<TEntity>(json, SerializerSettings);
+        }
+
+        public abstract Task<T> GetAsync(string key);
 
         public async Task RemoveAsync(string key)
         {
@@ -103,22 +84,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             await Task.CompletedTask;
         }
 
-        public async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
-        {
-            var toReturn = ExecuteInTransaction(session =>
-            {
-                var tokens = session.Query<Token>()
-                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                    .ToList();
-
-                if (!tokens.Any()) return new List<ITokenMetadata>();
-
-                var results = tokens.Select(x => ConvertFromJson(x.JsonCode)).ToArray();
-                return results.Cast<ITokenMetadata>();
-            });
-
-            return toReturn;
-        }
+        public abstract Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId);
 
         public async Task RevokeAsync(string subjectId, string clientId)
         {

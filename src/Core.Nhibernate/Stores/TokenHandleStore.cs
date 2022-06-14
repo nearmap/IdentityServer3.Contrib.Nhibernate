@@ -24,16 +24,24 @@
 
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Services;
+using Newtonsoft.Json;
 using NHibernate;
-using Token = IdentityServer3.Core.Models.Token;
+using EntityTokenModel = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using NHibTokenModel = IdentityServer3.Contrib.Nhibernate.Models.Token;
+using CoreTokenModel = IdentityServer3.Core.Models.Token;
+using CoreClientModel = IdentityServer3.Core.Models.Client;
+using System.Collections.Generic;
+using IdentityServer3.Core.Models;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
-    public class TokenHandleStore : BaseTokenStore<Token>, ITokenHandleStore
+    public class TokenHandleStore : BaseTokenStore<CoreTokenModel>, ITokenHandleStore
     {
         public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
             : base(session, TokenType.TokenHandle, scopeStore, clientStore, mapper)
@@ -41,16 +49,86 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         }
 
-        public override async Task StoreAsync(string key, Token value)
+        public override Task<CoreTokenModel> GetAsync(string key)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var token = session
+                    .Query<EntityTokenModel>()
+                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+
+                if (token == null)
+                {
+                    return null;
+                }
+
+                var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+
+                var tokenModel = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<CoreTokenModel>(tModel);
+
+                if (tokenModel == null)
+                {
+                    return null;
+                }
+
+                var clientEntity = session.Query<ClientEntity>()
+                    .SingleOrDefault(x => x.ClientId == tModel.ClientId);
+
+                tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
+
+                return tokenModel;
+            });
+
+            return Task.FromResult(toReturn);
+        }
+
+        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var tokens = session.Query<EntityTokenModel>()
+                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                    .ToList();
+
+                if (!tokens.Any()) return new List<ITokenMetadata>();
+
+                var tokenList = new List<ITokenMetadata>();
+
+                foreach(var token in tokens)
+                {
+                    var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+
+                    if (tModel == null)
+                    {
+                        continue;
+                    }
+
+                    var tokenModel = _mapper.Map<CoreTokenModel>(tModel);
+
+                    var clientEntity = session.Query<ClientEntity>()
+                        .SingleOrDefault(x => x.ClientId == tModel.ClientId);
+
+                    tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
+
+                    tokenList.Add(tokenModel);
+                }
+                
+                return tokenList;
+            });
+
+            return toReturn;
+        }
+
+        public override async Task StoreAsync(string key, CoreTokenModel value)
         {
             ExecuteInTransaction(session =>
             {
-                var nhCode = new Entities.Token
+                var nhCode = new EntityTokenModel
                 {
                     Key = key,
                     SubjectId = value.SubjectId,
                     ClientId = value.ClientId,
-                    JsonCode = ConvertToJson(value),
+                    JsonCode = ConvertToJson<NHibTokenModel>(value),
                     Expiry = DateTime.UtcNow.AddSeconds(value.Lifetime),
                     TokenType = this.TokenType
                 };

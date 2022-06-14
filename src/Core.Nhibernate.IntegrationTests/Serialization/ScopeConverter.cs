@@ -4,14 +4,14 @@ using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
 
-namespace IdentityServer3.Contrib.Nhibernate.Serialization
+namespace Core.Nhibernate.IntegrationTests.Serialization
 {
-    public class ScopeLite
+    internal class ScopeLite
     {
         public string Name { get; set; }
     }
 
-    public class ScopeConverter : JsonConverter
+    internal class ScopeConverter : JsonConverter
     {
         private readonly IScopeStore _scopeStore;
 

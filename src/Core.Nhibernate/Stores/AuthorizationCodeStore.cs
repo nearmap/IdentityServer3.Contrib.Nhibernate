@@ -24,13 +24,19 @@
 
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
+using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
+using Newtonsoft.Json;
 using NHibernate;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using AuthCode = IdentityServer3.Contrib.Nhibernate.Models.AuthorizationCode;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
@@ -42,6 +48,87 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         }
 
+        public override Task<AuthorizationCode> GetAsync(string key)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var token = session
+                    .Query<Token>()
+                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+
+                if (token == null)
+                {
+                    return null;
+                }
+
+                var authCode = ConvertFromJson<AuthCode>(token.JsonCode);
+
+                var code = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<AuthorizationCode>(authCode);
+
+                if (code == null)
+                {
+                    return null;
+                }
+
+                code.Client = ClientStore.FindClientByIdAsync(authCode.ClientId).Result;
+                code.RequestedScopes = ScopeStore.FindScopesAsync(
+                    authCode.RequestedScopes.Select(s => s.Name)).Result.ToList();
+
+                var claims = authCode.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+                code.Subject = new ClaimsPrincipal(
+                    new ClaimsIdentity(
+                        claims, authCode.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+                return code;
+            });
+
+            return Task.FromResult(toReturn);
+        }
+
+        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+        {
+            var toReturn = ExecuteInTransaction(session =>
+            {
+                var tokens = session.Query<Token>()
+                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                    .ToList();
+
+                if (!tokens.Any())
+                {
+                    return new List<ITokenMetadata>();
+                }
+
+                var tokenList = new List<ITokenMetadata>();
+
+                foreach (var token in tokens)
+                {
+                    var authCode = ConvertFromJson<AuthCode>(token.JsonCode);
+
+                    var code = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<AuthorizationCode>(authCode);
+
+                    if (code == null)
+                    {
+                        continue;
+                    }
+
+                    code.Client = ClientStore.FindClientByIdAsync(authCode.ClientId).Result;
+                    code.RequestedScopes = ScopeStore.FindScopesAsync(
+                        authCode.RequestedScopes.Select(s => s.Name)).Result.ToList();
+
+                    var claims = authCode.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+                    code.Subject = new ClaimsPrincipal(
+                        new ClaimsIdentity(
+                            claims, authCode.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+                    tokenList.Add(code);
+                }
+
+                return tokenList;
+            });
+
+            return toReturn;
+        }
+
         public override async Task StoreAsync(string key, AuthorizationCode code)
         {
             var nhCode = new Token
@@ -49,7 +136,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 Key = key,
                 SubjectId = code.SubjectId,
                 ClientId = code.ClientId,
-                JsonCode = ConvertToJson(code),
+                JsonCode = ConvertToJson<AuthCode>(code),
                 Expiry = DateTime.UtcNow.AddSeconds(code.Client.AuthorizationCodeLifetime),
                 TokenType = this.TokenType
             };

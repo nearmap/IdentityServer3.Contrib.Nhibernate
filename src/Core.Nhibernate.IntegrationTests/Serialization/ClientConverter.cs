@@ -3,14 +3,14 @@ using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
 
-namespace IdentityServer3.Contrib.Nhibernate.Serialization
+namespace Core.Nhibernate.IntegrationTests.Serialization
 {
-    public class ClientLite
+    internal class ClientLite
     {
         public string ClientId { get; set; }
     }
 
-    public class ClientConverter : JsonConverter
+    internal class ClientConverter : JsonConverter
     {
         private readonly IClientStore _clientStore;
 

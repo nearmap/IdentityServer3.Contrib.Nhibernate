@@ -95,6 +95,9 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>VersionInfo.cs</Link>
     </Compile>
+    <Compile Include="Models\Token.cs" />
+    <Compile Include="Models\AuthorizationCode.cs" />
+    <Compile Include="Models\RefreshToken.cs" />
     <Compile Include="NhibernateConfig\AutomappingConfiguration.cs" />
     <Compile Include="Entities\BaseEntity.cs" />
     <Compile Include="Entities\Client.cs" />
@@ -133,10 +136,10 @@
     <Compile Include="NhibernateConfig\MappingOverrides\ScopeMappingOverride.cs" />
     <Compile Include="NhibernateConfig\MappingOverrides\ScopeSecretMappingOverride.cs" />
     <Compile Include="NhibernateConfig\MappingOverrides\TokenMappingOverride.cs" />
-    <Compile Include="Serialization\ClaimConverter.cs" />
-    <Compile Include="Serialization\ClaimsPrincipalConverter.cs" />
-    <Compile Include="Serialization\ClientConverter.cs" />
-    <Compile Include="Serialization\ScopeConverter.cs" />
+    <Compile Include="Models\ClaimLite.cs" />
+    <Compile Include="Models\ClaimsPrincipalLite.cs" />
+    <Compile Include="Models\ClientLite.cs" />
+    <Compile Include="Models\ScopeLite.cs" />
     <Compile Include="Services\ClientConfigurationCorsPolicyService.cs" />
     <Compile Include="Stores\ClientStore.cs" />
     <Compile Include="NhibernateServiceOptions.cs" />

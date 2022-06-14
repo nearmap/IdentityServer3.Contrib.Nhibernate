@@ -2,9 +2,9 @@
 using System.Security.Claims;
 using Newtonsoft.Json;
 
-namespace IdentityServer3.Contrib.Nhibernate.Serialization
+namespace Core.Nhibernate.IntegrationTests.Serialization
 {
-    public class ClaimConverter : JsonConverter
+    internal class ClaimConverter : JsonConverter
     {
         public override bool CanConvert(Type objectType)
         {
