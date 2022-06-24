@@ -33,37 +33,33 @@ using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Services;
+using NHibernate.Linq;
 using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ConsentStoreTests : BaseStoreTests, IDisposable
+    public class ConsentStoreTests : BaseStoreTests
     {
         private readonly IConsentStore sut;
 
         private Consent testConsent1 = ObjectCreator.GetConsent();
         private Consent testConsent2 = ObjectCreator.GetConsent();
-        private bool disposedValue;
         private readonly Consent testConsent3 = ObjectCreator.GetConsent();
 
         public ConsentStoreTests()
         {
             sut = new ConsentStore(Session, Mapper);
-
-            ExecuteInTransaction(session =>
-            {
-                session.Save(testConsent3);
-            });
         }
 
         [Fact]
         public async Task LoadAsync()
         {
             //Arrange
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testConsent1);
-                session.Save(testConsent2);
+                await session.SaveAsync(testConsent1);
+                await session.SaveAsync(testConsent2);
+                await session.SaveAsync(testConsent3);
             });
 
             //Act
@@ -71,6 +67,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             //Assert
             result.Should().BeEquivalentTo(Mapper.Map<IdentityServer3.Core.Models.Consent>(testConsent1));
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.DeleteAsync(testConsent1);
+                await session.DeleteAsync(testConsent2);
+                await session.DeleteAsync(testConsent3);
+            });
         }
 
         [Fact]
@@ -81,10 +84,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             testConsent1 = ObjectCreator.GetConsent(null, subject);
             testConsent2 = ObjectCreator.GetConsent(null, subject);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testConsent1);
-                session.Save(testConsent2);
+                await session.SaveAsync(testConsent1);
+                await session.SaveAsync(testConsent2);
+                await session.SaveAsync(testConsent3);
             });
 
             //Act
@@ -93,6 +97,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             //Assert
             result.Should().BeEquivalentTo(Mapper.Map<IEnumerable<IdentityServer3.Core.Models.Consent>>(new[] { testConsent1, testConsent2 }));
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.DeleteAsync(testConsent1);
+                await session.DeleteAsync(testConsent2);
+                await session.DeleteAsync(testConsent3);
+            });
         }
 
         [Fact]
@@ -101,10 +112,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var updatedClientId = "updatedClientId";
 
             //Arrange
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testConsent1);
-                session.Save(testConsent2);
+                await session.SaveAsync(testConsent1);
+                await session.SaveAsync(testConsent2);
+                await session.SaveAsync(testConsent3);
             });
 
             var modelToUpdate = await sut.LoadAsync(testConsent1.Subject, testConsent1.ClientId);
@@ -113,18 +125,21 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             modelToUpdate.ClientId = updatedClientId;
             await sut.UpdateAsync(modelToUpdate);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Assert
-                var updatedEntity = session.Query<Consent>()
-                    .SingleOrDefault(c => c.ClientId == modelToUpdate.ClientId && c.Subject == modelToUpdate.Subject);
+                var updatedEntity = await session.Query<Consent>()
+                    .SingleOrDefaultAsync(c => c.ClientId == modelToUpdate.ClientId && c.Subject == modelToUpdate.Subject);
 
                 updatedEntity.Should().BeEquivalentTo(
                     Mapper.Map<Consent>(modelToUpdate),
                     options => options.Excluding(x => x.Id));
 
                 //CleanUp
-                session.Delete(updatedEntity);
+                await session.DeleteAsync(updatedEntity);
+                await session.DeleteAsync(testConsent1);
+                await session.DeleteAsync(testConsent2);
+                await session.DeleteAsync(testConsent3);
             });
         }
 
@@ -132,10 +147,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task UpdateAsync_WithUpdatedScopes()
         {
             //Arrange
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testConsent1);
-                session.Save(testConsent2);
+                await session.SaveAsync(testConsent1);
+                await session.SaveAsync(testConsent2);
+                await session.SaveAsync(testConsent3);
             });
 
             var modelToUpdate = await sut.LoadAsync(testConsent1.Subject, testConsent1.ClientId);
@@ -149,6 +165,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             updatedModel.Should().BeEquivalentTo(
                 Mapper.Map<IdentityServer3.Core.Models.Consent>(modelToUpdate));
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.DeleteAsync(testConsent1);
+                await session.DeleteAsync(testConsent2);
+                await session.DeleteAsync(testConsent3);
+            });
         }
 
         [Fact]
@@ -157,11 +180,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             //Arrange
             var consentToRevoke = ObjectCreator.GetConsent();
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testConsent1);
-                session.Save(testConsent2);
-                session.Save(consentToRevoke);
+                await session.SaveAsync(testConsent1);
+                await session.SaveAsync(testConsent2);
+                await session.SaveAsync(testConsent3);
+                await session.SaveAsync(consentToRevoke);
             });
 
             //Act
@@ -171,32 +195,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var revokedConsent = await sut.LoadAsync(consentToRevoke.Subject, consentToRevoke.ClientId);
 
             revokedConsent.Should().BeNull();
-        }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
+            await ExecuteInTransactionAsync(async session =>
             {
-                if (disposing)
-                {
-                    //CleanUp
-                    ExecuteInTransaction(session =>
-                    {
-                        session.Delete(testConsent1);
-                        session.Delete(testConsent2);
-                        session.Delete(testConsent3);
-                    });
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+                await session.DeleteAsync(testConsent1);
+                await session.DeleteAsync(testConsent2);
+                await session.DeleteAsync(testConsent3);
+            });
         }
     }
 }

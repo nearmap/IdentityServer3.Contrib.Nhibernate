@@ -36,15 +36,13 @@ using ClientModel = IdentityServer3.Core.Models.Client;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ClientStoreTests : BaseStoreTests, IDisposable
+    public class ClientStoreTests : BaseStoreTests
     {
         private readonly IClientStore sut;
 
         private readonly ClientEntity testClient1Entity;
         private readonly ClientEntity testClient2Entity;
         private readonly ClientEntity testClient3Entity;
-
-        private bool disposedValue;
 
         public ClientStoreTests()
         {
@@ -53,25 +51,24 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
             testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
             testClient3Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
-
-            ExecuteInTransaction(session =>
-            {
-                session.Save(testClient1Entity);
-                session.Save(testClient2Entity);
-                session.Save(testClient3Entity);
-            });
         }
 
         [Fact]
         public async Task FindClientByIdAsync()
         {
             //Arrange
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.SaveAsync(testClient1Entity);
+                await session.SaveAsync(testClient2Entity);
+                await session.SaveAsync(testClient3Entity);
+            });
             var testClientToFind = ObjectCreator.GetClient();
             var testClientToFindEntity = Mapper.Map<ClientModel, ClientEntity>(testClientToFind);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testClientToFindEntity);
+                await session.SaveAsync(testClientToFindEntity);
             });
 
             //Act
@@ -87,36 +84,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(testClientToFindEntity);
+                await session.DeleteAsync(testClientToFindEntity);
+                await session.DeleteAsync(testClient1Entity);
+                await session.DeleteAsync(testClient2Entity);
+                await session.DeleteAsync(testClient3Entity);
             });
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    //CleanUp
-                    ExecuteInTransaction(session =>
-                    {
-                        session.Delete(testClient1Entity);
-                        session.Delete(testClient2Entity);
-                        session.Delete(testClient3Entity);
-                    });
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
     }
 }

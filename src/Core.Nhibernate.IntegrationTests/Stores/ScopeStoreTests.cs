@@ -39,7 +39,7 @@ using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ScopeStoreTests : BaseStoreTests, IDisposable
+    public class ScopeStoreTests : BaseStoreTests
     {
         private readonly IScopeStore sut;
         private readonly Scope testScope1 = ObjectCreator.GetScope();
@@ -48,7 +48,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly Entities.Scope testScope1Entity;
         private readonly Entities.Scope testScope2Entity;
         private readonly Entities.Scope testScope3Entity;
-        private bool disposedValue;
 
         public ScopeStoreTests()
         {
@@ -62,11 +61,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task FindScopesAsync()
         {
             //Arrange
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testScope1Entity);
-                session.Save(testScope2Entity);
-                session.Save(testScope3Entity);
+                await session.SaveAsync(testScope1Entity);
+                await session.SaveAsync(testScope2Entity);
+                await session.SaveAsync(testScope3Entity);
             });
 
             //Act
@@ -81,6 +80,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
             //Assert
             scopeNames.Should().BeEquivalentTo(new[] { testScope1.Name, testScope2.Name });
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.DeleteAsync(testScope1Entity);
+                await session.DeleteAsync(testScope2Entity);
+                await session.DeleteAsync(testScope3Entity);
+            });
         }
 
         [Fact]
@@ -91,11 +97,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             testScope2Entity.ShowInDiscoveryDocument = true;
             testScope3Entity.ShowInDiscoveryDocument = false;
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testScope1Entity);
-                session.Save(testScope2Entity);
-                session.Save(testScope3Entity);
+                await session.SaveAsync(testScope1Entity);
+                await session.SaveAsync(testScope2Entity);
+                await session.SaveAsync(testScope3Entity);
             });
 
             //Act
@@ -109,32 +115,13 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 .Should().Contain(testScope1.Name)
                 .And.Subject
                 .Should().Contain(testScope2.Name);
-        }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
+            await ExecuteInTransactionAsync(async session =>
             {
-                if (disposing)
-                {
-                    //CleanUp
-                    ExecuteInTransaction(session =>
-                    {
-                        session.Delete(testScope1Entity);
-                        session.Delete(testScope2Entity);
-                        session.Delete(testScope3Entity);
-                    });
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+                await session.DeleteAsync(testScope1Entity);
+                await session.DeleteAsync(testScope2Entity);
+                await session.DeleteAsync(testScope3Entity);
+            });
         }
     }
 }

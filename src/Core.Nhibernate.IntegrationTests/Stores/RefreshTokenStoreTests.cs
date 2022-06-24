@@ -33,6 +33,7 @@ using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
+using NHibernate.Linq;
 using Xunit;
 
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
@@ -45,15 +46,18 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly IRefreshTokenStore sut;
 
         private readonly string testKey = Guid.NewGuid().ToString();
-        private readonly RefreshToken testCode;
-        private readonly Token tokenHandle;
+        private RefreshToken testCode;
+        private Token tokenHandle;
 
         public RefreshTokenStoreTests()
         {
-            var client = SetupClient();
-            testCode = ObjectCreator.GetRefreshToken(client);
             sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, Mapper);
+        }
 
+        private async Task SetupTestData()
+        {
+            var client = await SetupClientAsync();
+            testCode = ObjectCreator.GetRefreshToken(client);
             tokenHandle = GetToken(testKey, testCode);
         }
 
@@ -140,14 +144,15 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         [Fact]
         public async Task StoreAsync()
         {
+            await SetupTestData();
             //Act
             await sut.StoreAsync(testKey, testCode);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Assert
-                var token = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                var token = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
@@ -164,7 +169,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 token.TokenType.Should().Be(TokenType.RefreshToken);
 
                 //CleanUp
-                session.Delete(token);
+                await session.DeleteAsync(token);
             });
         }
 
@@ -172,25 +177,26 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task VerifyJsonCodeDataStructure()
         {
             // Setup
+            await SetupTestData();
             var expected = GetJsonCodeFromRefreshToken(testCode);
 
             await sut.StoreAsync(testKey, testCode);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Act
-                var token = session
+                var token = await session
                     .Query<Token>()
-                    .SingleOrDefault(t => t.Key == testKey && t.TokenType == TokenType.RefreshToken);
+                    .SingleOrDefaultAsync(t => t.Key == testKey && t.TokenType == TokenType.RefreshToken);
 
                 //Assert
                 token.JsonCode.Should().Be(expected);
             });
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(tokenHandle);
+                await session.DeleteAsync(tokenHandle);
                 session.Clear();
             });
         }
@@ -201,9 +207,10 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAsync()
         {
             //Arrange
-            ExecuteInTransaction(session =>
+            await SetupTestData();
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.SaveOrUpdate(tokenHandle);
+                await session.SaveOrUpdateAsync(tokenHandle);
             });
 
             //Act
@@ -220,9 +227,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(tokenHandle);
+                await session.DeleteAsync(tokenHandle);
             });
         }
 
@@ -230,19 +237,20 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task RemoveAsync()
         {
             //Arrange
-            ExecuteInTransaction(session =>
+            await SetupTestData();
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.SaveOrUpdate(tokenHandle);
+                await session.SaveOrUpdateAsync(tokenHandle);
             });
 
             //Act
             await sut.RemoveAsync(testKey);
 
             //Assert
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                var token = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                var token = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
@@ -254,7 +262,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
-            var client = SetupClient();
+            await SetupTestData();
+            var client = await SetupClientAsync();
             var subjectId1 = GetNewGuidString();
             var subjectId2 = GetNewGuidString();
 
@@ -268,12 +277,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var tokenHandle3 = GetToken(GetNewGuidString(), refreshToken3);
             var tokenHandle4 = GetToken(GetNewGuidString(), refreshToken4);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.SaveOrUpdate(tokenHandle1);
-                session.SaveOrUpdate(tokenHandle2);
-                session.SaveOrUpdate(tokenHandle3);
-                session.SaveOrUpdate(tokenHandle4);
+                await session.SaveOrUpdateAsync(tokenHandle1);
+                await session.SaveOrUpdateAsync(tokenHandle2);
+                await session.SaveOrUpdateAsync(tokenHandle3);
+                await session.SaveOrUpdateAsync(tokenHandle4);
             });
 
             //Act
@@ -291,12 +300,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(tokenHandle1);
-                session.Delete(tokenHandle2);
-                session.Delete(tokenHandle3);
-                session.Delete(tokenHandle4);
+                await session.DeleteAsync(tokenHandle1);
+                await session.DeleteAsync(tokenHandle2);
+                await session.DeleteAsync(tokenHandle3);
+                await session.DeleteAsync(tokenHandle4);
             });
         }
 
@@ -304,33 +313,34 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task RevokeAsync()
         {
             //Arrange
+            await SetupTestData();
             var subjectIdToRevoke = GetNewGuidString();
             var clientIdToRevoke = GetNewGuidString();
-            var client = SetupClient(clientIdToRevoke);
+            var client = await SetupClientAsync(clientIdToRevoke);
 
             var testKeyToRevoke = GetNewGuidString();
             var testCodeToRevoke = ObjectCreator.GetRefreshToken(client, subjectIdToRevoke);
             var tokenHandleToRevoke = GetToken(testKeyToRevoke, testCodeToRevoke);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(tokenHandle);
-                session.Save(tokenHandleToRevoke);
+                await session.SaveAsync(tokenHandle);
+                await session.SaveAsync(tokenHandleToRevoke);
             });
 
             //Act
             await sut.RevokeAsync(subjectIdToRevoke, clientIdToRevoke);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Assert
-                var tokenRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                var tokenRevoked = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKeyToRevoke);
 
-                var tokenNotRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => 
+                var tokenNotRevoked = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
                     t.TokenType == TokenType.RefreshToken &&
                     t.Key == testKey);
 
@@ -338,7 +348,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 tokenNotRevoked.Should().BeEquivalentTo(tokenHandle);
 
                 //CleanUp
-                session.Delete(tokenNotRevoked);
+                await session.DeleteAsync(tokenNotRevoked);
             });
         }
 

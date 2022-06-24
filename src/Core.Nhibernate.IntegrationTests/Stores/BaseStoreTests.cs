@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Text;
+using System.Threading.Tasks;
 using AutoMapper;
 using FluentNHibernate.Cfg;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
@@ -113,11 +114,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             new SchemaUpdate(cfg).Execute(false, true);
         }
 
-        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
             if (_readSession.GetCurrentTransaction() != null)
             {
-                actionToExecute.Invoke(_readSession);
+                await actionToExecute(_readSession);
             }
             else
             {
@@ -125,12 +126,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 {
                     try
                     {
-                        actionToExecute.Invoke(_readSession);
-                        tx.Commit();
+                        await actionToExecute(_readSession);
+                        await tx.CommitAsync();
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }
@@ -155,27 +156,27 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             return JsonConvert.DeserializeObject<T>(json, SerializerSettings);
         }
 
-        protected ClientModel SetupClient(string clientId = null)
+        protected async Task<ClientModel> SetupClientAsync(string clientId = null)
         {
             var testClient = ObjectCreator.GetClient(clientId);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(Mapper.Map<ClientEntity>(testClient));
+                await session.SaveAsync(Mapper.Map<ClientEntity>(testClient));
             });
 
             return testClient;
         }
 
-        protected IEnumerable<ScopeModel> SetupScopes(int count)
+        protected async Task<IEnumerable<ScopeModel>> SetupScopesAsync(int count)
         {
             var scopes = ObjectCreator.GetScopes(count);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 foreach(var scope in scopes)
                 {
-                    session.Save(Mapper.Map<ScopeEntity>(scope));
+                    await session.SaveAsync(Mapper.Map<ScopeEntity>(scope));
                 }
             });
 
