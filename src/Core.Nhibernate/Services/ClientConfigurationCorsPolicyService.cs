@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Services
 {
@@ -38,9 +37,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Services
 
         public ClientConfigurationCorsPolicyService(ISessionFactory nhSessionFactory)
         {
-            if (nhSessionFactory == null) throw new ArgumentNullException(nameof(nhSessionFactory));
-
-            _nhSessionFactory = nhSessionFactory;
+            _nhSessionFactory = nhSessionFactory ?? throw new ArgumentNullException(nameof(nhSessionFactory));
         }
 
         public async Task<bool> IsOriginAllowedAsync(string origin)

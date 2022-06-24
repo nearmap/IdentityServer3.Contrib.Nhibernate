@@ -67,19 +67,19 @@ namespace IdentityServer3.Contrib.Nhibernate
                     break;
                 }
 
-                await ClearTokens();
+                await ClearTokensAsync();
             }
         }
 
-        private async Task ClearTokens()
+        private async Task ClearTokensAsync()
         {
             try
             {
                 _logger.LogInformation("Clearing tokens");
 
-                _session.CreateQuery($"DELETE {nameof(Token)} t WHERE t.{nameof(Token.Expiry)} < :refDate")
+                await _session.CreateQuery($"DELETE {nameof(Token)} t WHERE t.{nameof(Token.Expiry)} < :refDate")
                     .SetParameter("refDate", DateTime.UtcNow)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             }
             catch (Exception ex)
             {

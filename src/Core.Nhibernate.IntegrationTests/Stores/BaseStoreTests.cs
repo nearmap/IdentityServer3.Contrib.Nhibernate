@@ -100,7 +100,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
-                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg);
+                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg, new PostgresSQL93Dialect());
                     BuildSchema(cfg);
                 })
                 .BuildSessionFactory();
@@ -115,7 +115,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_readSession.Transaction != null && _readSession.Transaction.IsActive)
+            if (_readSession.GetCurrentTransaction() != null)
             {
                 actionToExecute.Invoke(_readSession);
             }

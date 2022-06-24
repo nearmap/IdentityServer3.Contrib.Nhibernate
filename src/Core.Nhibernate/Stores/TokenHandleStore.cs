@@ -29,8 +29,8 @@ using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Services;
-using Newtonsoft.Json;
 using NHibernate;
+using NHibernate.Linq;
 using EntityTokenModel = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
 using NHibTokenModel = IdentityServer3.Contrib.Nhibernate.Models.Token;
@@ -49,92 +49,88 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         }
 
-        public override Task<CoreTokenModel> GetAsync(string key)
+        public override async Task<CoreTokenModel> GetAsync(string key)
+            => await ExecuteInTransactionAsync(session => GetInnerAsync(session, key));
+
+        private async Task<CoreTokenModel> GetInnerAsync(ISession session, string key)
         {
-            var toReturn = ExecuteInTransaction(session =>
-            {
-                var token = session
+            var token = await session
                     .Query<EntityTokenModel>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                    .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
 
-                if (token == null)
-                {
-                    return null;
-                }
+            if (token == null)
+            {
+                return null;
+            }
 
-                var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+            var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
 
-                var tokenModel = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<CoreTokenModel>(tModel);
+            var tokenModel = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<CoreTokenModel>(tModel);
 
-                if (tokenModel == null)
-                {
-                    return null;
-                }
+            if (tokenModel == null)
+            {
+                return null;
+            }
 
-                var clientEntity = session.Query<ClientEntity>()
-                    .SingleOrDefault(x => x.ClientId == tModel.ClientId);
+            var clientEntity = await session.Query<ClientEntity>()
+                .SingleOrDefaultAsync(x => x.ClientId == tModel.ClientId);
 
-                tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
+            tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
 
-                return tokenModel;
-            });
-
-            return Task.FromResult(toReturn);
+            return tokenModel;
         }
 
         public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+            => await ExecuteInTransactionAsync(session => GetAllInnerAsync(session, subjectId));
+
+        private async Task<IEnumerable<ITokenMetadata>> GetAllInnerAsync(ISession session, string subjectId)
         {
-            var toReturn = ExecuteInTransaction(session =>
+            var tokens = await session.Query<EntityTokenModel>()
+                .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                .ToListAsync();
+
+            if (!tokens.Any())
             {
-                var tokens = session.Query<EntityTokenModel>()
-                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                    .ToList();
+                return new List<ITokenMetadata>();
+            }
 
-                if (!tokens.Any()) return new List<ITokenMetadata>();
+            var tokenList = new List<ITokenMetadata>();
 
-                var tokenList = new List<ITokenMetadata>();
+            foreach (var token in tokens)
+            {
+                var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
 
-                foreach(var token in tokens)
+                if (tModel == null)
                 {
-                    var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
-
-                    if (tModel == null)
-                    {
-                        continue;
-                    }
-
-                    var tokenModel = _mapper.Map<CoreTokenModel>(tModel);
-
-                    var clientEntity = session.Query<ClientEntity>()
-                        .SingleOrDefault(x => x.ClientId == tModel.ClientId);
-
-                    tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
-
-                    tokenList.Add(tokenModel);
+                    continue;
                 }
-                
-                return tokenList;
-            });
 
-            return toReturn;
+                var tokenModel = _mapper.Map<CoreTokenModel>(tModel);
+
+                var clientEntity = await session.Query<ClientEntity>()
+                    .SingleOrDefaultAsync(x => x.ClientId == tModel.ClientId);
+
+                tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
+
+                tokenList.Add(tokenModel);
+            }
+
+            return tokenList;
         }
 
         public override async Task StoreAsync(string key, CoreTokenModel value)
         {
-            ExecuteInTransaction(session =>
+            var nhCode = new EntityTokenModel
             {
-                var nhCode = new EntityTokenModel
-                {
-                    Key = key,
-                    SubjectId = value.SubjectId,
-                    ClientId = value.ClientId,
-                    JsonCode = ConvertToJson<NHibTokenModel>(value),
-                    Expiry = DateTime.UtcNow.AddSeconds(value.Lifetime),
-                    TokenType = this.TokenType
-                };
+                Key = key,
+                SubjectId = value.SubjectId,
+                ClientId = value.ClientId,
+                JsonCode = ConvertToJson<NHibTokenModel>(value),
+                Expiry = DateTime.UtcNow.AddSeconds(value.Lifetime),
+                TokenType = this.TokenType
+            };
 
-                session.Save(nhCode);
-            });
+            await SaveAsync(nhCode);
 
             await Task.CompletedTask;
         }

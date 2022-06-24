@@ -23,12 +23,12 @@
 */
 
 
-using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
+using NHibernate.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
@@ -41,16 +41,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         public async Task<IdentityServer3.Core.Models.Client> FindClientByIdAsync(string clientId)
         {
-            var client = ExecuteInTransaction(session =>
-            {
-                var clientEntity = session
+            var client = await ExecuteInTransactionAsync(async session =>
+                await session
                     .Query<Client>()
-                    .SingleOrDefault(c => c.ClientId == clientId);
+                    .SingleOrDefaultAsync(c => c.ClientId == clientId)
+            );
 
-                return _mapper.Map<Core.Models.Client>(clientEntity);
-            });
-
-            return client;
+            return _mapper.Map<Core.Models.Client>(client);
         }
     }
 }

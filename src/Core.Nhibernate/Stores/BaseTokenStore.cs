@@ -71,36 +71,32 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         public async Task RemoveAsync(string key)
         {
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.CreateQuery($"DELETE {nameof(Token)} t " +
+                await session.CreateQuery($"DELETE {nameof(Token)} t " +
                                     $"WHERE t.{nameof(Token.Key)} = :key " +
                                     $"and t.{nameof(Token.TokenType)} = :tokenType")
                     .SetParameter("key", key)
                     .SetParameter("tokenType", TokenType)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             });
-
-            await Task.CompletedTask;
         }
 
         public abstract Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId);
 
         public async Task RevokeAsync(string subjectId, string clientId)
         {
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.CreateQuery($"DELETE {nameof(Token)} t " +
+                await session.CreateQuery($"DELETE {nameof(Token)} t " +
                                     $"WHERE t.{nameof(Token.SubjectId)} = :subject " +
                                     $"and t.{nameof(Token.ClientId)} = :clientId " +
                                     $"and t.{nameof(Token.TokenType)} = :tokenType")
                     .SetParameter("subject", subjectId)
                     .SetParameter("clientId", clientId)
                     .SetParameter("tokenType", TokenType)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             });
-
-            await Task.CompletedTask;
         }
 
         public abstract Task StoreAsync(string key, T value);

@@ -25,6 +25,7 @@
 
 using System;
 using System.Data;
+using System.Threading.Tasks;
 using AutoMapper;
 using NHibernate;
 
@@ -41,11 +42,24 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 
-        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task<object> SaveAsync(object obj)
+            => await ExecuteInTransactionAsync(session => session.SaveAsync(obj));
+
+        protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhSession.Transaction != null && _nhSession.Transaction.IsActive)
+            var transaction = _nhSession.GetCurrentTransaction();
+
+            if (transaction != null)
             {
-                actionToExecute.Invoke(_nhSession);
+                try
+                {
+                    await actionToExecute(_nhSession);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             else
             {
@@ -53,12 +67,12 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 {
                     try
                     {
-                        actionToExecute.Invoke(_nhSession);
-                        tx.Commit();
+                        await actionToExecute(_nhSession);
+                        await tx.CommitAsync();
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }
@@ -66,12 +80,21 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             }
         }
 
-        protected T ExecuteInTransaction<T>(Func<ISession, T> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task<T> ExecuteInTransactionAsync<T>(Func<ISession, Task<T>> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhSession.Transaction != null && _nhSession.Transaction.IsActive)
+            var transaction = _nhSession.GetCurrentTransaction();
+
+            if (transaction != null)
             {
-                var result = actionToExecute.Invoke(_nhSession);
-                return result;
+                try
+                {
+                    return await actionToExecute(_nhSession);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             else
             {
@@ -79,13 +102,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 {
                     try
                     {
-                        var result = actionToExecute.Invoke(_nhSession);
-                        tx.Commit();
+                        var result = await actionToExecute(_nhSession);
+                        await tx.CommitAsync();
                         return result;
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }

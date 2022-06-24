@@ -33,8 +33,8 @@ using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
-using Newtonsoft.Json;
 using NHibernate;
+using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 using AuthCode = IdentityServer3.Contrib.Nhibernate.Models.AuthorizationCode;
 
@@ -48,13 +48,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         }
 
-        public override Task<AuthorizationCode> GetAsync(string key)
+        public override async Task<AuthorizationCode> GetAsync(string key)
         {
-            var toReturn = ExecuteInTransaction(session =>
+            return await ExecuteInTransactionAsync(async session =>
             {
-                var token = session
+                var token = await session
                     .Query<Token>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                    .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
 
                 if (token == null)
                 {
@@ -70,9 +70,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     return null;
                 }
 
-                code.Client = ClientStore.FindClientByIdAsync(authCode.ClientId).Result;
-                code.RequestedScopes = ScopeStore.FindScopesAsync(
-                    authCode.RequestedScopes.Select(s => s.Name)).Result.ToList();
+                code.Client = await ClientStore.FindClientByIdAsync(authCode.ClientId);
+                code.RequestedScopes = (await ScopeStore.FindScopesAsync(
+                    authCode.RequestedScopes.Select(s => s.Name))).ToList();
 
                 var claims = authCode.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
                 code.Subject = new ClaimsPrincipal(
@@ -81,17 +81,15 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
                 return code;
             });
-
-            return Task.FromResult(toReturn);
         }
 
         public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
         {
-            var toReturn = ExecuteInTransaction(session =>
+            return await ExecuteInTransactionAsync(async session =>
             {
-                var tokens = session.Query<Token>()
+                var tokens = await session.Query<Token>()
                     .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                    .ToList();
+                    .ToListAsync();
 
                 if (!tokens.Any())
                 {
@@ -111,9 +109,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                         continue;
                     }
 
-                    code.Client = ClientStore.FindClientByIdAsync(authCode.ClientId).Result;
-                    code.RequestedScopes = ScopeStore.FindScopesAsync(
-                        authCode.RequestedScopes.Select(s => s.Name)).Result.ToList();
+                    code.Client = await ClientStore.FindClientByIdAsync(authCode.ClientId);
+                    code.RequestedScopes = (await ScopeStore.FindScopesAsync(
+                        authCode.RequestedScopes.Select(s => s.Name))).ToList();
 
                     var claims = authCode.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
                     code.Subject = new ClaimsPrincipal(
@@ -125,8 +123,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
                 return tokenList;
             });
-
-            return toReturn;
         }
 
         public override async Task StoreAsync(string key, AuthorizationCode code)
@@ -141,10 +137,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 TokenType = this.TokenType
             };
 
-            ExecuteInTransaction(session =>
-            {
-                session.Save(nhCode);
-            });
+            await SaveAsync(nhCode);
 
             await Task.CompletedTask;
         }

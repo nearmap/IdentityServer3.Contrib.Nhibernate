@@ -33,7 +33,7 @@ namespace WebHost.Config
             cleanup.Start();
 
             // these two calls just pre-populate the test DB from the in-memory config
-            ConfigureClients(Clients.Get(), nhSession, mapper);
+            ConfigureClients(Clients.Get(), nhSession);
             ConfigureScopes(Scopes.Get(), nhSession, mapper);
 
             var factory = new IdentityServerServiceFactory();
@@ -66,7 +66,7 @@ namespace WebHost.Config
                 .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
-                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg);
+                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg, new PostgresSQL93Dialect());
                     BuildSchema(cfg);
                 })
                 .BuildSessionFactory();
@@ -79,7 +79,7 @@ namespace WebHost.Config
             new SchemaUpdate(cfg).Execute(false, true);
         }
 
-        public static void ConfigureClients(ICollection<Client> clients, ISession nhSession, IMapper mapper)
+        public static void ConfigureClients(ICollection<Client> clients, ISession nhSession)
         {
             using (var tx = nhSession.BeginTransaction())
             {

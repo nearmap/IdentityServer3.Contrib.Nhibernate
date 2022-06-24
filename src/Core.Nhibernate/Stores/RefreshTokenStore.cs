@@ -29,8 +29,8 @@ using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
-using Newtonsoft.Json;
 using NHibernate;
+using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 using RefToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
 using System;
@@ -48,108 +48,102 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         }
 
-        public override Task<RefreshToken> GetAsync(string key)
+        public override async Task<RefreshToken> GetAsync(string key)
+            => await ExecuteInTransactionAsync(session => GetInnerAsync(session, key));
+
+        private async Task<RefreshToken> GetInnerAsync(ISession session, string key)
         {
-            var toReturn = ExecuteInTransaction(session =>
+            var token = await session
+                .Query<Token>()
+                .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
+
+            if (token == null)
             {
-                var token = session
-                    .Query<Token>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                return null;
+            }
 
-                if (token == null)
-                {
-                    return null;
-                }
+            var refToken = ConvertFromJson<RefToken>(token.JsonCode);
 
+            var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
+
+            if (refreshToken == null)
+            {
+                return null;
+            }
+
+            refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(refToken.ClientId);
+
+            var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+            refreshToken.Subject = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+            return refreshToken;
+        }
+
+        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+            => await ExecuteInTransactionAsync(session => GetAllInnerAsync(session, subjectId));
+
+        private async Task<IEnumerable<ITokenMetadata>> GetAllInnerAsync(ISession session, string subjectId)
+        {
+            var tokens = await session.Query<Token>()
+                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                    .ToListAsync();
+
+            if (!tokens.Any()) return new List<ITokenMetadata>();
+
+            var tokenList = new List<ITokenMetadata>();
+
+            foreach (var token in tokens)
+            {
                 var refToken = ConvertFromJson<RefToken>(token.JsonCode);
 
                 var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
 
                 if (refreshToken == null)
                 {
-                    return null;
+                    continue;
                 }
 
-                refreshToken.AccessToken.Client = ClientStore.FindClientByIdAsync(refToken.ClientId).Result;
+                refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(refToken.ClientId);
 
                 var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
                 refreshToken.Subject = new ClaimsPrincipal(
                     new ClaimsIdentity(
                         claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
 
-                return refreshToken;
-            });
+                tokenList.Add(refreshToken);
+            }
 
-            return Task.FromResult(toReturn);
-        }
-
-        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
-        {
-            var toReturn = ExecuteInTransaction(session =>
-            {
-                var tokens = session.Query<Token>()
-                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                    .ToList();
-
-                if (!tokens.Any()) return new List<ITokenMetadata>();
-
-                var tokenList = new List<ITokenMetadata>();
-
-                foreach (var token in tokens)
-                {
-                    var refToken = ConvertFromJson<RefToken>(token.JsonCode);
-
-                    var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
-
-                    if (refreshToken == null)
-                    {
-                        continue;
-                    }
-
-                    refreshToken.AccessToken.Client = ClientStore.FindClientByIdAsync(refToken.ClientId).Result;
-
-                    var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
-                    refreshToken.Subject = new ClaimsPrincipal(
-                        new ClaimsIdentity(
-                            claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
-
-                    tokenList.Add(refreshToken);
-                }
-
-                return tokenList;
-            });
-
-            return toReturn;
+            return tokenList;
         }
 
         public override async Task StoreAsync(string key, RefreshToken value)
+            => await ExecuteInTransactionAsync(session => StoreInnerAsync(session, key, value));
+
+        private async Task StoreInnerAsync(ISession session, string key, RefreshToken value)
         {
-            ExecuteInTransaction(session =>
-            {
-                var token = session
+            var token = await session
                     .Query<Token>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                    .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
 
-                if (token == null)
+            if (token == null)
+            {
+                token = new Token
                 {
-                    token = new Token
-                    {
-                        Key = key,
-                        SubjectId = value.SubjectId,
-                        ClientId = value.ClientId,
-                        TokenType = TokenType
-                    };
+                    Key = key,
+                    SubjectId = value.SubjectId,
+                    ClientId = value.ClientId,
+                    TokenType = TokenType
+                };
 
-                    session.Save(token);
-                }
+                await session.SaveAsync(token);
+            }
 
-                token.JsonCode = ConvertToJson<RefToken>(value);
-                token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
+            token.JsonCode = ConvertToJson<RefToken>(value);
+            token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
 
-                session.Update(token);
-            });
-
-            await Task.CompletedTask;
+            await session.UpdateAsync(token);
         }
     }
 }

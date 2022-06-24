@@ -43,40 +43,36 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         public async Task<IEnumerable<Core.Models.Scope>> FindScopesAsync(IEnumerable<string> scopeNames)
         {
-            var result = ExecuteInTransaction(session =>
+            var scopes = await ExecuteInTransactionAsync(async session =>
             {
-                var scopes = GetScopesBaseQuery(session);
+                var scopeEntities = GetScopesBaseQuery(session);
 
-                var filterScopeNames = scopeNames.ToArray<object>();
-
-                if (scopeNames != null && filterScopeNames.Any())
+                if (scopeNames?.Any() ?? false)
                 {
-                    scopes = scopes.Where(s => filterScopeNames.Contains(s.Name));
+                    scopeEntities = scopeEntities.Where(scope => scopeNames.Contains(scope.Name));
                 }
 
-                var list = scopes.ToList();
-                return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
+                return await scopeEntities.ToListAsync();
             });
 
-            return result;
+            return _mapper.Map<IEnumerable<Core.Models.Scope>>(scopes);
         }
 
         public async Task<IEnumerable<Core.Models.Scope>> GetScopesAsync(bool publicOnly = true)
         {
-            var result = ExecuteInTransaction(session =>
+            var scopes = await ExecuteInTransactionAsync(async session =>
             {
-                var scopes = GetScopesBaseQuery(session);
+                var scopeEntities = GetScopesBaseQuery(session);
 
                 if (publicOnly)
                 {
-                    scopes = scopes.Where(s => s.ShowInDiscoveryDocument);
+                    scopeEntities = scopeEntities.Where(s => s.ShowInDiscoveryDocument);
                 }
-                
-                var list = scopes.ToList();
-                return _mapper.Map<IEnumerable<Core.Models.Scope>>(list);
+
+                return await scopeEntities.ToListAsync();
             });
 
-            return result;
+            return _mapper.Map<IEnumerable<Core.Models.Scope>>(scopes);
         }
 
         private IQueryable<Scope> GetScopesBaseQuery(ISession session)
