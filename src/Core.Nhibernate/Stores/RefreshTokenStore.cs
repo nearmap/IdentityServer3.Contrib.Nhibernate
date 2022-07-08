@@ -136,14 +136,12 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     ClientId = value.ClientId,
                     TokenType = TokenType
                 };
-
-                await session.SaveAsync(token);
             }
 
             token.JsonCode = ConvertToJson<RefToken>(value);
             token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
 
-            await session.UpdateAsync(token);
+            await session.SaveOrUpdateAsync(token);
         }
     }
 }

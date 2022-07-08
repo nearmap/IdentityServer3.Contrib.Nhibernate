@@ -131,8 +131,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             };
 
             await SaveAsync(nhCode);
-
-            await Task.CompletedTask;
         }
     }
 }

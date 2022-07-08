@@ -25,7 +25,6 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
@@ -69,26 +68,29 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             if (item == null)
             {
-                if (consent.Scopes == null || !consent.Scopes.Any()) return;
+                if (!consent.Scopes?.Any() ?? true)
+                {
+                    return;
+                }
 
                 item = new Consent
                 {
                     Subject = consent.Subject,
                     ClientId = consent.ClientId,
-                    Scopes = StringifyScopes(consent.Scopes)
+                    Scopes = string.Join(",", consent.Scopes)
                 };
 
                 await session.SaveAsync(item);
             }
             else
             {
-                if (consent.Scopes == null || !consent.Scopes.Any())
+                if (!consent.Scopes?.Any() ?? true)
                 {
                     await session.DeleteAsync(item);
                 }
-
-                item.Scopes = StringifyScopes(consent.Scopes);
-
+                
+                
+                item.Scopes = string.Join(",", consent.Scopes);
                 await session.SaveOrUpdateAsync(item);
             }
         }
@@ -111,29 +113,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         }
 
         private IEnumerable<string> ParseScopes(string scopes)
-        {
-            return string.IsNullOrWhiteSpace(scopes) ? Enumerable.Empty<string>() : scopes.Split(',');
-        }
-
-        private string StringifyScopes(IEnumerable<string> scopes)
-        {
-            var enumerable = scopes as string[] ?? scopes.ToArray();
-            if (scopes == null || !enumerable.Any())
-            {
-                return null;
-            }
-
-            var sb = new StringBuilder();
-            foreach (var scope in enumerable)
-            {
-                sb.Append(scope);
-                sb.Append(",");
-            }
-
-            sb.Remove(sb.Length - 1, 1);
-
-            return sb.ToString();
-        }
+            => string.IsNullOrWhiteSpace(scopes) ? Enumerable.Empty<string>() : scopes.Split(',');
 
         public async Task RevokeAsync(string subject, string client)
             => await ExecuteInTransactionAsync(async session =>
