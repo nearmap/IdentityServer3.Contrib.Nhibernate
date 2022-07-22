@@ -94,7 +94,10 @@ task CreateNuGetPackage -depends Compile {
   
   copy-item $src_directory\IdentityServer3.Contrib.Nhibernate.nuspec $dist_directory
   copy-item $output_directory\net472\IdentityServer3.Contrib.Nhibernate.dll $dist_directory\lib\net472
-  copy-item $output_directory\net472\IdentityServer3.Contrib.Nhibernate.pdb $dist_directory\lib\net472
+  
+  if ($preRelease){
+	  copy-item $output_directory\net472\IdentityServer3.Contrib.Nhibernate.pdb $dist_directory\lib\net472
+  }
   
 	exec { . $nuget_path pack $dist_directory\IdentityServer3.Contrib.Nhibernate.nuspec -BasePath $dist_directory -OutputDirectory $dist_directory -version $packageVersion }
 }
