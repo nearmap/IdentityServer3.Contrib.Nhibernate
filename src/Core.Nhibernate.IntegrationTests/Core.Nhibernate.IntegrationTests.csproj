@@ -1,8 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" Sdk="Microsoft.NET.Sdk">
   <Import Project="..\packages\xunit.runner.console.2.4.1\build\xunit.runner.console.props" Condition="Exists('..\packages\xunit.runner.console.2.4.1\build\xunit.runner.console.props')" />
   <Import Project="..\packages\xunit.core.2.4.1\build\xunit.core.props" Condition="Exists('..\packages\xunit.core.2.4.1\build\xunit.core.props')" />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -11,11 +10,8 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Core.Nhibernate.IntegrationTests</RootNamespace>
     <AssemblyName>Core.Nhibernate.IntegrationTests</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFramework>net472</TargetFramework>
     <FileAlignment>512</FileAlignment>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-    <TargetFrameworkProfile />
     <RunSettingsFilePath>
     </RunSettingsFilePath>
   </PropertyGroup>
@@ -189,17 +185,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ObjectCreator.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Stores\AuthorizationCodeStoreTests.cs" />
-    <Compile Include="Stores\BaseStoreTests.cs" />
-    <Compile Include="Stores\ClientStoreTests.cs" />
-    <Compile Include="Stores\ConsentStoreTests.cs" />
-    <Compile Include="Stores\RefreshTokenStoreTests.cs" />
-    <Compile Include="Stores\ScopeStoreTests.cs" />
-    <Compile Include="Stores\TokenHandleStoreTests.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\default.licenseheader">
       <Link>default.licenseheader</Link>
     </None>
@@ -219,7 +204,6 @@
   <ItemGroup>
     <Analyzer Include="..\packages\xunit.analyzers.0.10.0\analyzers\dotnet\cs\xunit.analyzers.dll" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>IF EXIST "$(ProjectDir)connectionstring.config" COPY /Y "$(ProjectDir)connectionstring.config" "$(TargetDir)connectionstring.config"</PostBuildEvent>
   </PropertyGroup>
