@@ -25,7 +25,6 @@
 
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
@@ -42,8 +41,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class RefreshTokenStore : BaseTokenStore<RefreshToken>, IRefreshTokenStore
     {
-        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
-            : base(session, TokenType.RefreshToken, scopeStore, clientStore, mapper)
+        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
+            : base(session, TokenType.RefreshToken, scopeStore, clientStore)
         {
 
         }

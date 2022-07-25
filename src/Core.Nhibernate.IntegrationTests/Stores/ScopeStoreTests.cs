@@ -51,7 +51,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public ScopeStoreTests()
         {
-            sut = new ScopeStore(Session, Mapper);
+            sut = new ScopeStore(Session);
             testScope1Entity = Mapper.Map<Scope, Entities.Scope>(testScope1);
             testScope2Entity = Mapper.Map<Scope, Entities.Scope>(testScope2);
             testScope3Entity = Mapper.Map<Scope, Entities.Scope>(testScope3);

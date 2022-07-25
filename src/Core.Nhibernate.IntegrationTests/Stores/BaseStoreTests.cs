@@ -72,8 +72,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             _readSession = NhSessionFactory.OpenSession();
             Session = NhSessionFactory.OpenSession();
 
-            ScopeStore = new ScopeStore(Session, Mapper);
-            ClientStore = new ClientStore(Session, Mapper);
+            ScopeStore = new ScopeStore(Session);
+            ClientStore = new ClientStore(Session);
         }
 
         protected void RemoveTrailingComma(StringBuilder jsonBuilder)

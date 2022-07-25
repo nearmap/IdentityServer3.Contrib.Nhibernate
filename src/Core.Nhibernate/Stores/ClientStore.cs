@@ -24,7 +24,6 @@
 
 
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -34,8 +33,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ClientStore : NhibernateStore, IClientStore
     {
-        public ClientStore(ISession session, IMapper mapper)
-            : base(session, mapper)
+        public ClientStore(ISession session)
+            : base(session)
         {
         }
 

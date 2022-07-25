@@ -51,7 +51,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public RefreshTokenStoreTests()
         {
-            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, Mapper);
+            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore);
         }
 
         private async Task SetupTestData()

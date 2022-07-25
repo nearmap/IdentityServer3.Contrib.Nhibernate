@@ -27,6 +27,7 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using AutoMapper;
+using IdentityServer3.Core.Models;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
@@ -36,9 +37,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IMapper _mapper;
         private readonly ISession _nhSession;
 
-        protected NhibernateStore(ISession session, IMapper mapper)
+        protected NhibernateStore(ISession session)
         {
-            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<EntitiesProfile>();
+            })
+                .CreateMapper();
             _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 

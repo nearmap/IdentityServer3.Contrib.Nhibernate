@@ -26,7 +26,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -43,8 +42,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class TokenHandleStore : BaseTokenStore<CoreTokenModel>, ITokenHandleStore
     {
-        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
-            : base(session, TokenType.TokenHandle, scopeStore, clientStore, mapper)
+        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
+            : base(session, TokenType.TokenHandle, scopeStore, clientStore)
         {
 
         }

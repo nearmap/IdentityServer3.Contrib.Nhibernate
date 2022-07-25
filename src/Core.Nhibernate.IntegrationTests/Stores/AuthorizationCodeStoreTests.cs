@@ -52,7 +52,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public AuthorizationCodeStoreTests()
         {
-            sut = new AuthorizationCodeStore(Session, ScopeStore, ClientStore, Mapper);
+            sut = new AuthorizationCodeStore(Session, ScopeStore, ClientStore);
         }
 
         private async Task SetupTestData()

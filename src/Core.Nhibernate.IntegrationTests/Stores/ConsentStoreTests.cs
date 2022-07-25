@@ -48,7 +48,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public ConsentStoreTests()
         {
-            sut = new ConsentStore(Session, Mapper);
+            sut = new ConsentStore(Session);
         }
 
         [Fact]

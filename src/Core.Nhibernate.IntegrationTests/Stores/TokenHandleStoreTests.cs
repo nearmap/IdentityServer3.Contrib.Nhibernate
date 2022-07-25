@@ -46,7 +46,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public TokenHandleStoreTests()
         {
-            sut = new TokenHandleStore(Session, ScopeStore, ClientStore, Mapper);
+            sut = new TokenHandleStore(Session, ScopeStore, ClientStore);
         }
 
         private string GetJsonCodeFromRefreshToken(TokenModel code)

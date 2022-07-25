@@ -46,7 +46,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         public ClientStoreTests()
         {
-            sut = new ClientStore(Session, Mapper);
+            sut = new ClientStore(Session);
 
             testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
             testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());

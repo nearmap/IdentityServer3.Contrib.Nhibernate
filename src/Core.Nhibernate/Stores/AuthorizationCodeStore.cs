@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
@@ -42,8 +41,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class AuthorizationCodeStore : BaseTokenStore<AuthorizationCode>, IAuthorizationCodeStore
     {
-        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
-            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore, mapper)
+        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
+            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore)
         {
 
         }
