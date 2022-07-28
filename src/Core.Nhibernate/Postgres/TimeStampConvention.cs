@@ -15,11 +15,14 @@ namespace IdentityServer3.Contrib.Nhibernate.Postgres
     public class TimeStampConvention : IPropertyConvention, IPropertyConventionAcceptance
     {
         public void Apply(IPropertyInstance instance)
-            => instance.CustomType<DateTimeType>();
+            => instance.CustomType<DateTimeOffsetType>();
 
         public void Accept(IAcceptanceCriteria<IPropertyInspector> criteria)
             => criteria.Expect(p =>
                 p.Type == typeof(DateTime) ||
-                p.Type == typeof(DateTime?));
+                p.Type == typeof(DateTime?) ||
+                p.Type == typeof(DateTimeOffset) ||
+                p.Type == typeof(DateTimeOffset?)
+            );
     }
 }
