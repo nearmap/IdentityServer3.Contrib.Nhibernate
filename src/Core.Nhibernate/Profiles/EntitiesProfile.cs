@@ -10,7 +10,7 @@ using CoreModels = IdentityServer3.Core.Models;
 // ReSharper disable once CheckNamespace
 namespace IdentityServer3.Core.Models // TODO - relocate this namespace
 {
-    public class EntitiesProfile : Profile
+    internal class EntitiesProfile : Profile
     {
         public EntitiesProfile()
         {

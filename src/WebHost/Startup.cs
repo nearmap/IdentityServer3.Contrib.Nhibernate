@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using IdentityServer3.Core.Configuration;
-using IdentityServer3.Core.Models;
+﻿using IdentityServer3.Core.Configuration;
 using Microsoft.Owin;
 using Owin;
 using Serilog;
@@ -27,18 +25,13 @@ namespace WebHost
 
             var logger = factory.CreateLogger("main");
 
-            var mapper = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<EntitiesProfile>();
-            }).CreateMapper();
-
             appBuilder.Map("/core", core =>
             {
                 var options = new IdentityServerOptions
                 {
                     SiteName = "IdentityServer3 (Nhibernate)",
                     SigningCertificate = Certificate.Get(),
-                    Factory = Factory.Configure(mapper, logger)
+                    Factory = Factory.Configure(logger)
                 };
 
                 core.UseIdentityServer(options);

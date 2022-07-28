@@ -48,5 +48,15 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             return _mapper.Map<Core.Models.Client>(client);
         }
+
+        public object Save(Core.Models.Client obj)
+        {
+            return SaveAsync(_mapper.Map<Client>(obj)).Result;
+        }
+
+        public async Task<object> SaveAsync(Core.Models.Client obj)
+        {
+            return await SaveAsync(_mapper.Map<Client>(obj));
+        }
     }
 }

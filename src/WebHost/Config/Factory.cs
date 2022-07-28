@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
 using System.Linq;
-using AutoMapper;
 using FluentNHibernate.Cfg;
 using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
+using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
 using Microsoft.Extensions.Logging;
@@ -20,11 +19,8 @@ namespace WebHost.Config
 {
     static class Factory
     {
-        private static IMapper _mapper;
-
-        public static IdentityServerServiceFactory Configure(IMapper mapper, ILogger logger)
+        public static IdentityServerServiceFactory Configure(ILogger logger)
         {
-            _mapper = mapper;
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
             var tokenCleanUpSession = nhSessionFactory.OpenSession();
@@ -34,7 +30,7 @@ namespace WebHost.Config
 
             // these two calls just pre-populate the test DB from the in-memory config
             ConfigureClients(Clients.Get(), nhSession);
-            ConfigureScopes(Scopes.Get(), nhSession, mapper);
+            ConfigureScopes(Scopes.Get(), nhSession);
 
             var factory = new IdentityServerServiceFactory();
 
@@ -87,18 +83,18 @@ namespace WebHost.Config
 
                 if (clientsInDb.Any()) return;
 
-                var toSave = clients.Select(c => _mapper.Map<Client, Entities.Client>(c));
+                var clientStore = new ClientStore(nhSession);
 
-                foreach (var client in toSave)
+                foreach (var client in clients)
                 {
-                    nhSession.Save(client);
+                    clientStore.Save(client);
                 }
 
                 tx.Commit();
             }
         }
 
-        public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession, IMapper mapper)
+        public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession)
         {
             using (var tx = nhSession.BeginTransaction())
             {
@@ -106,11 +102,11 @@ namespace WebHost.Config
 
                 if (scopesInDb.Any()) return;
 
-                var toSave = scopes.Select(s => mapper.Map<Scope, Entities.Scope>(s));
+                var scopeStore = new ScopeStore(nhSession);
 
-                foreach (var scope in toSave)
+                foreach (var scope in scopes)
                 {
-                    nhSession.Save(scope);
+                    scopeStore.Save(scope);
                 }
 
                 tx.Commit();

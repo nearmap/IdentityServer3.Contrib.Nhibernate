@@ -74,6 +74,16 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             return _mapper.Map<IEnumerable<Core.Models.Scope>>(scopes);
         }
 
+        public object Save(Core.Models.Scope obj)
+        {
+            return SaveAsync(_mapper.Map<Scope>(obj)).Result;
+        }
+
+        public async Task<object> SaveAsync(Core.Models.Scope obj)
+        {
+            return await SaveAsync(_mapper.Map<Scope>(obj));
+        }
+
         private IQueryable<Scope> GetScopesBaseQuery(ISession session)
         {
             return session.Query<Scope>()
