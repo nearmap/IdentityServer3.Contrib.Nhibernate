@@ -16,12 +16,10 @@
 	<tags>IdentityServer OpenID Connect OpenIDConnect OAuth2 OWIN ASP.NET Katana WebApi SSO Federation Claims Identity Nhibernate</tags>
     <dependencies>
 	  <group targetFramework=".NETFramework4.7.2">
-	    <dependency id="AutoMapper" version="10.1.1" />
-	    <dependency id="FluentNHibernate" version="3.1.0" />
-	    <dependency id="IdentityServer3" version="2.6.3" />
-	    <dependency id="Iesi.Collections" version="4.0.4" />
-	    <dependency id="Newtonsoft.Json" version="13.0.1" />
-	    <dependency id="NHibernate" version="5.3.11" />
+		<dependency id="FluentNHibernate" version="2.1.2" />
+		<dependency id="IdentityServer3" version="2.6.3" />
+		<dependency id="Newtonsoft.Json" version="13.0.1" />
+		<dependency id="Microsoft.Extensions.Logging.Abstractions" version="6.0.1" />
 	  </group>
     </dependencies>
   </metadata>

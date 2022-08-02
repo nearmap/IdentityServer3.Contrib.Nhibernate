@@ -1,5 +1,5 @@
 
-Framework '4.5'
+Framework '4.7.2'
 properties {
 	$base_directory = Resolve-Path . 
     $target_config = "Release"
@@ -9,10 +9,11 @@ properties {
 	$sln_file = "$src_directory\IdentityServer3.Contrib.Nhibernate.sln"
 	
 	$framework_version = "v4.7.2"
-    $output_directory = "$src_directory\Core.Nhibernate\bin\$target_config"
+    $output_directory = "$src_directory\Core.Nhibernate\bin\$target_config\net472"
 	$obj_directory = "$src_directory\Core.Nhibernate\obj\$target_config"
     $xunit_path = "$src_directory\packages\xunit.runner.console.2.4.1\tools\net472\xunit.console.exe"
     $nuget_path = "$src_directory\.nuget\nuget.exe"
+	$ilmerge_path = "$src_directory\packages\ILMerge.3.0.41\tools\net452\ILMerge.exe"
 	
 	$buildNumber = 0;
 	$version = "2.0.0.0"
@@ -70,7 +71,19 @@ task RunIntegraionTests -depends Compile, CopyConfigFile {
 	.$xunit_path "$src_directory\Core.Nhibernate.IntegrationTests\bin\$target_config\$project.dll"
 }
 
-task CreateNuGetPackage -depends Compile {
+task ILMerge -depends Compile {
+	$input_dlls = "$output_directory\Core.Nhibernate.dll $output_directory\Automapper.dll"
+
+	New-Item $dist_directory\lib\net472 -Type Directory
+	
+  if ($preRelease){
+	  Invoke-Expression "$ilmerge_path /targetplatform:v4 /internalize /allowDup /target:library /out:$dist_directory\lib\net472\IdentityServer3.Contrib.Nhibernate.dll $input_dlls"
+  }else{
+	  Invoke-Expression "$ilmerge_path /ndebug /targetplatform:v4 /internalize /allowDup /target:library /out:$dist_directory\lib\net472\IdentityServer3.Contrib.Nhibernate.dll $input_dlls"
+  }
+}
+
+task CreateNuGetPackage -depends ILMerge {
 	$vSplit = $version.Split('.')
 	if($vSplit.Length -ne 4)
 	{
@@ -87,17 +100,8 @@ task CreateNuGetPackage -depends Compile {
 	if ($buildNumber -ne 0){
 		$packageVersion = $packageVersion + "-build" + $buildNumber.ToString().PadLeft(5,'0')
 	}
-
-  md $dist_directory
-  md $dist_directory\lib
-  md $dist_directory\lib\net472
   
   copy-item $src_directory\IdentityServer3.Contrib.Nhibernate.nuspec $dist_directory
-  copy-item $output_directory\net472\IdentityServer3.Contrib.Nhibernate.dll $dist_directory\lib\net472
-  
-  if ($preRelease){
-	  copy-item $output_directory\net472\IdentityServer3.Contrib.Nhibernate.pdb $dist_directory\lib\net472
-  }
   
 	exec { . $nuget_path pack $dist_directory\IdentityServer3.Contrib.Nhibernate.nuspec -BasePath $dist_directory -OutputDirectory $dist_directory -version $packageVersion }
 }

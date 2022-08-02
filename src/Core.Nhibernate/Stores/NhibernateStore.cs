@@ -52,9 +52,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            var transaction = _nhSession.GetCurrentTransaction();
+            var transaction = _nhSession.Transaction;
 
-            if (transaction != null)
+            if (transaction != null && transaction.IsActive)
             {
                 try
                 {
@@ -87,9 +87,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
         protected async Task<T> ExecuteInTransactionAsync<T>(Func<ISession, Task<T>> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            var transaction = _nhSession.GetCurrentTransaction();
+            var transaction = _nhSession.Transaction;
 
-            if (transaction != null)
+            if (transaction != null && transaction.IsActive)
             {
                 try
                 {

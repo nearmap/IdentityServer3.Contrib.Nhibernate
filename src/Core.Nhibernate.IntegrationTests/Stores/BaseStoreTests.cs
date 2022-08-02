@@ -116,7 +116,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_readSession.GetCurrentTransaction() != null)
+            if (_readSession.Transaction != null && _readSession.Transaction.IsActive)
             {
                 await actionToExecute(_readSession);
             }
