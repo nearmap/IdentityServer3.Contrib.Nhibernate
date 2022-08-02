@@ -34,9 +34,9 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
         {
             var config = new AutomappingConfiguration(registerOperationalServices, registerConfigurationServices);
 
-            var map = AutoMap.AssemblyOf<IBaseEntity>(config)
+            var map = AutoMap.AssemblyOf<BaseEntity>(config)
                 .Conventions.Add(DefaultCascade.All())
-                .UseOverridesFromAssemblyOf<IBaseEntity>()
+                .UseOverridesFromAssemblyOf<BaseEntity>()
                 .IgnoreBase(typeof(BaseEntity<>));
 
             return map;

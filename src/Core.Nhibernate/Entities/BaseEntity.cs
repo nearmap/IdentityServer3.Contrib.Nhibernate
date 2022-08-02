@@ -1,6 +1,8 @@
 ﻿namespace IdentityServer3.Contrib.Nhibernate.Entities
 {
-    public abstract class BaseEntity<TKey> : IBaseEntity<TKey>
+    internal abstract class BaseEntity { }
+
+    public abstract class BaseEntity<TKey>
     {
         public virtual TKey Id { get; set; }
     }

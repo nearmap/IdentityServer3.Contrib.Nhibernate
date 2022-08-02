@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace IdentityServer3.Contrib.Nhibernate.Models
 {
-    public class Token
+    internal class Token
     {
         public string Audience { get; set; }
         public string Issuer { get; set; }
