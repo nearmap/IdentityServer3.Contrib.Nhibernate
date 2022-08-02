@@ -40,7 +40,7 @@ using AuthorizationCodeEntity = IdentityServer3.Contrib.Nhibernate.Models.Author
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class AuthorizationCodeStoreTests : BaseStoreTests
+    public abstract class AuthorizationCodeStoreTests : BaseStoreTests
     {
         private readonly IAuthorizationCodeStore sut;
 
@@ -50,9 +50,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         private Token nhCode;
 
-        public AuthorizationCodeStoreTests()
+        protected AuthorizationCodeStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new AuthorizationCodeStore(Session, ScopeStore, ClientStore);
+            sut = new AuthorizationCodeStore(Session, ScopeStore, ClientStore, dbProfile);
         }
 
         private async Task SetupTestData()
@@ -204,7 +204,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 options => options
                     .IgnoringCyclicReferences()
                     .Using<DateTimeOffset>(
-                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, TestConstants.AllowableTimeVariance))
                     .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
@@ -278,7 +278,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     options => options
                         .IgnoringCyclicReferences()
                         .Using<DateTimeOffset>(
-                            ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                            ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, TestConstants.AllowableTimeVariance))
                         .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
@@ -335,7 +335,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     options => options
                         .IgnoringCyclicReferences()
                         .Using<DateTimeOffset>(
-                            ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                            ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, TestConstants.AllowableTimeVariance))
                         .WhenTypeIs<DateTimeOffset>());
 
                 //CleanUp

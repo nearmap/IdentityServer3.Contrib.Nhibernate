@@ -41,8 +41,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class AuthorizationCodeStore : BaseTokenStore<AuthorizationCode>, IAuthorizationCodeStore
     {
-        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore)
+        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig profile)
+            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore, profile)
         {
 
         }

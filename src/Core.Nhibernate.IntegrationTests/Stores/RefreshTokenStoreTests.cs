@@ -41,7 +41,7 @@ using RefreshTokenEntity = IdentityServer3.Contrib.Nhibernate.Models.RefreshToke
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class RefreshTokenStoreTests : BaseStoreTests
+    public abstract class RefreshTokenStoreTests : BaseStoreTests
     {
         private readonly IRefreshTokenStore sut;
 
@@ -49,9 +49,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private RefreshToken testCode;
         private Token tokenHandle;
 
-        public RefreshTokenStoreTests()
+        protected RefreshTokenStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore);
+            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, dbProfile);
         }
 
         private async Task SetupTestData()
@@ -165,7 +165,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                         .Excluding(x => x.TokenType)
                         .Excluding(x => x.Id));
                 token.Key.Should().Be(testKey);
-                token.Expiry.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.LifeTime), new TimeSpan(0, 1, 0));
+                // Assume all times stored in the DB are UTC, don't convert
+                token.Expiry.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.LifeTime), new TimeSpan(0, 1, 0));
                 token.TokenType.Should().Be(TokenType.RefreshToken);
 
                 //CleanUp

@@ -23,40 +23,15 @@
 */
 
 
-using System.Threading.Tasks;
-using IdentityServer3.Contrib.Nhibernate.Entities;
-using IdentityServer3.Core.Services;
-using NHibernate;
-using NHibernate.Linq;
 
-namespace IdentityServer3.Contrib.Nhibernate.Stores
+using IdentityServer3.Core.Models;
+
+namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ClientStore : NhibernateStore, IClientStore
+    public class ClientStoreTestsNpgsql4 : ClientStoreTests
     {
-        public ClientStore(ISession session, Core.Models.IDbProfileConfig dbProfile)
-            : base(session, dbProfile)
+        public ClientStoreTestsNpgsql4() : base(new Npgsql4ProviderConfig())
         {
-        }
-
-        public async Task<IdentityServer3.Core.Models.Client> FindClientByIdAsync(string clientId)
-        {
-            var client = await ExecuteInTransactionAsync(async session =>
-                await session
-                    .Query<Client>()
-                    .SingleOrDefaultAsync(c => c.ClientId == clientId)
-            );
-
-            return _mapper.Map<Core.Models.Client>(client);
-        }
-
-        public object Save(Core.Models.Client obj)
-        {
-            return SaveAsync(_mapper.Map<Client>(obj)).Result;
-        }
-
-        public async Task<object> SaveAsync(Core.Models.Client obj)
-        {
-            return await SaveAsync(_mapper.Map<Client>(obj));
         }
     }
 }

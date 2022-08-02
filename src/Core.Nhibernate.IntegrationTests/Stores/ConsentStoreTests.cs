@@ -26,7 +26,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -38,7 +37,7 @@ using Xunit;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ConsentStoreTests : BaseStoreTests
+    public abstract class ConsentStoreTests : BaseStoreTests
     {
         private readonly IConsentStore sut;
 
@@ -46,9 +45,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private Consent testConsent2 = ObjectCreator.GetConsent();
         private readonly Consent testConsent3 = ObjectCreator.GetConsent();
 
-        public ConsentStoreTests()
+        protected ConsentStoreTests(IdentityServer3.Core.Models.IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new ConsentStore(Session);
+            sut = new ConsentStore(Session, dbProfile);
         }
 
         [Fact]

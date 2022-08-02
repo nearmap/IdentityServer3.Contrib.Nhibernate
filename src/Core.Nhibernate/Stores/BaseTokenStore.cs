@@ -42,8 +42,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session)
+        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
+            : base(session, dbProfile)
         {
             ScopeStore = scopeStore ?? throw new ArgumentNullException(nameof(scopeStore));
             ClientStore = clientStore ?? throw new ArgumentNullException(nameof(clientStore));

@@ -40,13 +40,13 @@ using NHibernate.Linq;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class TokenHandleStoreTests : BaseStoreTests
+    public abstract class TokenHandleStoreTests : BaseStoreTests
     {
         private readonly TokenHandleStore sut;
 
-        public TokenHandleStoreTests()
+        protected TokenHandleStoreTests(IdentityServer3.Core.Models.IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new TokenHandleStore(Session, ScopeStore, ClientStore);
+            sut = new TokenHandleStore(Session, ScopeStore, ClientStore, dbProfile);
         }
 
         private string GetJsonCodeFromRefreshToken(TokenModel code)
@@ -116,7 +116,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                         .Excluding(x => x.TokenType)
                         .Excluding(x => x.Id));
                 token.Key.Should().Be(testKey);
-                token.Expiry.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.Lifetime), new TimeSpan(0, 1, 0));
+                // Assume all times stored in the DB are UTC, don't convert
+                token.Expiry.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.Lifetime), new TimeSpan(0, 1, 0));
                 token.TokenType.Should().Be(TokenType.TokenHandle);
 
                 //CleanUp

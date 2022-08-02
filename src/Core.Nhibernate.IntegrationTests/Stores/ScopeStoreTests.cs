@@ -24,9 +24,7 @@
 
 
 
-using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -39,7 +37,7 @@ using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ScopeStoreTests : BaseStoreTests
+    public abstract class ScopeStoreTests : BaseStoreTests
     {
         private readonly IScopeStore sut;
         private readonly Scope testScope1 = ObjectCreator.GetScope();
@@ -49,9 +47,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly Entities.Scope testScope2Entity;
         private readonly Entities.Scope testScope3Entity;
 
-        public ScopeStoreTests()
+        protected ScopeStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new ScopeStore(Session);
+            sut = new ScopeStore(Session, dbProfile);
             testScope1Entity = Mapper.Map<Scope, Entities.Scope>(testScope1);
             testScope2Entity = Mapper.Map<Scope, Entities.Scope>(testScope2);
             testScope3Entity = Mapper.Map<Scope, Entities.Scope>(testScope3);

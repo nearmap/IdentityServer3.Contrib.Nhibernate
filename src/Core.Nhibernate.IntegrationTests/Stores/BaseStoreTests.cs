@@ -59,11 +59,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseStoreTests()
+        protected BaseStoreTests(IDbProfileConfig dbProfile)
         {
             Mapper = new MapperConfiguration(cfg =>
             {
-                cfg.AddProfile<EntitiesProfile>();
+                cfg.AddProfile(dbProfile?.GetProfile() ?? new EntitiesProfile());
             })
                 .CreateMapper();
 
@@ -72,8 +72,8 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             _readSession = NhSessionFactory.OpenSession();
             Session = NhSessionFactory.OpenSession();
 
-            ScopeStore = new ScopeStore(Session);
-            ClientStore = new ClientStore(Session);
+            ScopeStore = new ScopeStore(Session, dbProfile);
+            ClientStore = new ClientStore(Session, dbProfile);
         }
 
         protected void RemoveTrailingComma(StringBuilder jsonBuilder)

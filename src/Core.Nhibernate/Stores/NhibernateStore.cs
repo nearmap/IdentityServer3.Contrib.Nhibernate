@@ -37,13 +37,14 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IMapper _mapper;
         private readonly ISession _nhSession;
 
-        protected NhibernateStore(ISession session)
+        protected NhibernateStore(ISession session, IDbProfileConfig dbProfile)
         {
             _mapper = new MapperConfiguration(cfg =>
             {
-                cfg.AddProfile<EntitiesProfile>();
+                cfg.AddProfile(dbProfile?.GetProfile() ?? new EntitiesProfile());
             })
                 .CreateMapper();
+
             _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 

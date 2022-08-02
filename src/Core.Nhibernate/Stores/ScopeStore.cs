@@ -35,8 +35,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ScopeStore : NhibernateStore, IScopeStore
     {
-        public ScopeStore(ISession session) 
-            : base(session)
+        public ScopeStore(ISession session, Core.Models.IDbProfileConfig dbProfile) 
+            : base(session, dbProfile)
         {
         }
 

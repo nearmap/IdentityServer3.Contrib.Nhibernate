@@ -28,6 +28,7 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 
@@ -36,7 +37,7 @@ using ClientModel = IdentityServer3.Core.Models.Client;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ClientStoreTests : BaseStoreTests
+    public abstract class ClientStoreTests : BaseStoreTests
     {
         private readonly IClientStore sut;
 
@@ -44,9 +45,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly ClientEntity testClient2Entity;
         private readonly ClientEntity testClient3Entity;
 
-        public ClientStoreTests()
+        public ClientStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
         {
-            sut = new ClientStore(Session);
+            sut = new ClientStore(Session, dbProfile);
 
             testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
             testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());

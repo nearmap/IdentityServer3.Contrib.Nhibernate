@@ -35,8 +35,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ConsentStore : NhibernateStore, IConsentStore
     {
-        public ConsentStore(ISession session)
-            : base(session)
+        public ConsentStore(ISession session, Core.Models.IDbProfileConfig dbProfile)
+            : base(session, dbProfile)
         {
         }
 

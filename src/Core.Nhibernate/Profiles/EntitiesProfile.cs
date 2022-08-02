@@ -10,7 +10,7 @@ using CoreModels = IdentityServer3.Core.Models;
 // ReSharper disable once CheckNamespace
 namespace IdentityServer3.Core.Models // TODO - relocate this namespace
 {
-    internal class EntitiesProfile : Profile
+    public class EntitiesProfile : Profile
     {
         public EntitiesProfile()
         {
@@ -21,8 +21,8 @@ namespace IdentityServer3.Core.Models // TODO - relocate this namespace
             CreateMap<CoreModels.ScopeClaim, Entities.ScopeClaim>(MemberList.Source);
 
             CreateMap<CoreModels.Secret, Entities.ScopeSecret>(MemberList.Source)
-                .ForMember(x => x.Expiration, opts => opts.MapFrom(
-                    src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
+            .ForMember(x => x.Expiration, opts => opts.MapFrom(
+                src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
 
             CreateMap<CoreModels.Secret, Entities.ClientSecret>(MemberList.Source)
                 .ForMember(x => x.Expiration, opts => opts.MapFrom(

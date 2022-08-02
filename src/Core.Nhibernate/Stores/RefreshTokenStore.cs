@@ -41,8 +41,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class RefreshTokenStore : BaseTokenStore<RefreshToken>, IRefreshTokenStore
     {
-        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session, TokenType.RefreshToken, scopeStore, clientStore)
+        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
+            : base(session, TokenType.RefreshToken, scopeStore, clientStore, dbProfile)
         {
 
         }

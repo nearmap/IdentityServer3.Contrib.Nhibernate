@@ -7,6 +7,7 @@ using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
+using IdentityServer3.Core.Models;
 using Microsoft.Extensions.Logging;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
@@ -19,6 +20,8 @@ namespace WebHost.Config
 {
     static class Factory
     {
+        private static readonly IDbProfileConfig dbConfig = new Npgsql6ProviderConfig();
+
         public static IdentityServerServiceFactory Configure(ILogger logger)
         {
             var nhSessionFactory = GetNHibernateSessionFactory();
@@ -83,7 +86,7 @@ namespace WebHost.Config
 
                 if (clientsInDb.Any()) return;
 
-                var clientStore = new ClientStore(nhSession);
+                var clientStore = new ClientStore(nhSession, dbConfig);
 
                 foreach (var client in clients)
                 {
@@ -102,7 +105,7 @@ namespace WebHost.Config
 
                 if (scopesInDb.Any()) return;
 
-                var scopeStore = new ScopeStore(nhSession);
+                var scopeStore = new ScopeStore(nhSession, dbConfig);
 
                 foreach (var scope in scopes)
                 {

@@ -42,8 +42,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class TokenHandleStore : BaseTokenStore<CoreTokenModel>, ITokenHandleStore
     {
-        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session, TokenType.TokenHandle, scopeStore, clientStore)
+        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
+            : base(session, TokenType.TokenHandle, scopeStore, clientStore, dbProfile)
         {
 
         }
