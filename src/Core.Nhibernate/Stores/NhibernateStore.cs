@@ -50,6 +50,20 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected async Task<object> SaveAsync(object obj)
             => await ExecuteInTransactionAsync(session => session.SaveAsync(obj));
 
+        [Obsolete("Use ExecuteInTransactionAsync method instead")]
+        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+            => ExecuteInTransactionAsync(
+                session => { actionToExecute(session); return Task.CompletedTask; },
+                isolationLevel)
+            .GetAwaiter().GetResult();
+
+        [Obsolete("Use ExecuteInTransactionAsync method instead")]
+        protected T ExecuteInTransaction<T>(Func<ISession, T> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+            => ExecuteInTransactionAsync(
+                session => { return Task.FromResult(actionToExecute(session)); },
+                isolationLevel)
+                .GetAwaiter().GetResult();
+
         protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
             var transaction = _nhSession.Transaction;
