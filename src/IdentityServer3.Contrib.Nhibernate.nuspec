@@ -16,6 +16,7 @@
 	<tags>IdentityServer OpenID Connect OpenIDConnect OAuth2 OWIN ASP.NET Katana WebApi SSO Federation Claims Identity Nhibernate</tags>
     <dependencies>
 	  <group targetFramework=".NETFramework4.7.2">
+		<dependency id="Autofac" version="6.4.0" />
 		<dependency id="FluentNHibernate" version="2.1.2" />
 		<dependency id="IdentityServer3" version="2.6.3" />
 		<dependency id="Newtonsoft.Json" version="13.0.1" />

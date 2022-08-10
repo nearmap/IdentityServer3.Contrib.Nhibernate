@@ -45,7 +45,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly ClientEntity testClient2Entity;
         private readonly ClientEntity testClient3Entity;
 
-        public ClientStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
+        protected ClientStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
         {
             sut = new ClientStore(Session, dbProfile);
 
