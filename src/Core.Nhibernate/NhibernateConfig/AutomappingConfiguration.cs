@@ -29,7 +29,7 @@ using IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
-    public class AutomappingConfiguration : DefaultAutomappingConfiguration
+    internal class AutomappingConfiguration : DefaultAutomappingConfiguration
     {
         private readonly bool _registerOperationalServices;
         private readonly bool _registerConfigurationServices;

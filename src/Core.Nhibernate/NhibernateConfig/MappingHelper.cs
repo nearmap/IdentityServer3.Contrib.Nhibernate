@@ -23,8 +23,12 @@
 
 
 using FluentNHibernate.Automapping;
+using FluentNHibernate.Cfg;
+using FluentNHibernate.Conventions;
 using FluentNHibernate.Conventions.Helpers;
 using IdentityServer3.Contrib.Nhibernate.Entities;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
@@ -40,6 +44,27 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
                 .IgnoreBase(typeof(BaseEntity<>));
 
             return map;
+        }
+
+        public static void ConfigureNhibernateServicesMappings(
+            this MappingConfiguration m, 
+            bool registerOperationalServices, 
+            bool registerConfigurationServices, 
+            IEnumerable<IConvention> conventions = null)
+        {
+            var config = new AutomappingConfiguration(registerOperationalServices, registerConfigurationServices);
+
+            var map = AutoMap.AssemblyOf<BaseEntity>(config)
+                .Conventions.Add(DefaultCascade.All())
+                .UseOverridesFromAssemblyOf<BaseEntity>()
+                .IgnoreBase(typeof(BaseEntity<>));
+
+            if (conventions != null)
+            {
+                map.Conventions.Add(conventions.ToArray());
+            }
+
+            m.AutoMappings.Add(map);
         }
     }
 }

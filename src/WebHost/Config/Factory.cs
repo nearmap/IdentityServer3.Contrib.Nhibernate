@@ -37,11 +37,7 @@ namespace WebHost.Config
 
             var factory = new IdentityServerServiceFactory();
 
-            factory.RegisterNhibernateStores(new NhibernateServiceOptions(nhSessionFactory)
-            {
-                RegisterOperationalServices = true,
-                RegisterConfigurationServices = true
-            });
+            factory.RegisterNhibernateStores(nhSessionFactory, true, true);
 
             factory.UseInMemoryUsers(Users.Get().ToList());
 
@@ -75,7 +71,7 @@ namespace WebHost.Config
 
         private static void BuildSchema(Configuration cfg)
         {
-            new SchemaUpdate(cfg).Execute(false, true);
+            new SchemaUpdate(cfg).Execute(false, true);    
         }
 
         public static void ConfigureClients(ICollection<Client> clients, ISession nhSession)

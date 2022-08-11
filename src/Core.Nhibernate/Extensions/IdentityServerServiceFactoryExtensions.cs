@@ -2,7 +2,6 @@
 using System.Linq;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 
@@ -12,22 +11,22 @@ namespace IdentityServer3.Core.Configuration
     {
 
         public static void RegisterNhibernateStores(this IdentityServerServiceFactory factory,
-            NhibernateServiceOptions serviceOptions)
+            ISessionFactory nHibernateSessionFactory, bool registerOperationalServices = false, bool registerConfigurationServices = false)
         {
             _ = factory ?? throw new ArgumentNullException(nameof(factory));
-            _ = serviceOptions ?? throw new ArgumentNullException(nameof(serviceOptions));
+            _ = nHibernateSessionFactory ?? throw new ArgumentNullException(nameof(nHibernateSessionFactory));
 
-            if (serviceOptions.RegisterOperationalServices || serviceOptions.RegisterConfigurationServices)
+            if (registerOperationalServices || registerConfigurationServices)
             {
-                RegisterSessionFactory(factory, serviceOptions);
+                RegisterSessionFactory(factory, nHibernateSessionFactory);
             }
 
-            if (serviceOptions.RegisterOperationalServices)
+            if (registerOperationalServices)
             {
                 RegisterOperationalServices(factory);
             }
 
-            if (serviceOptions.RegisterConfigurationServices)
+            if (registerConfigurationServices)
             {
                 RegisterConfigurationServices(factory);
             }
@@ -47,12 +46,12 @@ namespace IdentityServer3.Core.Configuration
             factory.ScopeStore = new Registration<IScopeStore, ScopeStore>();
         }
 
-        private static void RegisterSessionFactory(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
+        private static void RegisterSessionFactory(IdentityServerServiceFactory factory, ISessionFactory NhibernateSessionFactory)
         {
             if (factory.Registrations.All(r => r.DependencyType != typeof(ISessionFactory)))
             {
                 factory.Register(
-                    new Registration<ISessionFactory>(serviceOptions.NhibernateSessionFactory));
+                    new Registration<ISessionFactory>(NhibernateSessionFactory));
                 factory.Register(new Registration<ISession>(c => c.Resolve<ISessionFactory>().OpenSession())
                 {
                     Mode = RegistrationMode.InstancePerHttpRequest
