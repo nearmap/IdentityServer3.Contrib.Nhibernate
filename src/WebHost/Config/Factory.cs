@@ -37,7 +37,7 @@ namespace WebHost.Config
 
             var factory = new IdentityServerServiceFactory();
 
-            factory.RegisterNhibernateStores(nhSessionFactory, true, true);
+            factory.RegisterNhibernateStores(nhSessionFactory, dbConfig, true, true);
 
             factory.UseInMemoryUsers(Users.Get().ToList());
 

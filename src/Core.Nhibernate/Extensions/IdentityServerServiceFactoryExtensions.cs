@@ -4,6 +4,7 @@ using IdentityServer3.Core.Services;
 using NHibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using IdentityServer3.Core.Models;
 
 namespace IdentityServer3.Core.Configuration
 {
@@ -11,14 +12,18 @@ namespace IdentityServer3.Core.Configuration
     {
 
         public static void RegisterNhibernateStores(this IdentityServerServiceFactory factory,
-            ISessionFactory nHibernateSessionFactory, bool registerOperationalServices = false, bool registerConfigurationServices = false)
+            ISessionFactory nHibernateSessionFactory,
+            IDbProfileConfig dbProfileConfig, 
+            bool registerOperationalServices = false, 
+            bool registerConfigurationServices = false)
         {
             _ = factory ?? throw new ArgumentNullException(nameof(factory));
             _ = nHibernateSessionFactory ?? throw new ArgumentNullException(nameof(nHibernateSessionFactory));
+            _ = dbProfileConfig ?? throw new ArgumentNullException(nameof(dbProfileConfig));
 
             if (registerOperationalServices || registerConfigurationServices)
             {
-                RegisterSessionFactory(factory, nHibernateSessionFactory);
+                RegisterSessionFactory(factory, nHibernateSessionFactory, dbProfileConfig);
             }
 
             if (registerOperationalServices)
@@ -46,12 +51,15 @@ namespace IdentityServer3.Core.Configuration
             factory.ScopeStore = new Registration<IScopeStore, ScopeStore>();
         }
 
-        private static void RegisterSessionFactory(IdentityServerServiceFactory factory, ISessionFactory NhibernateSessionFactory)
+        private static void RegisterSessionFactory(
+            IdentityServerServiceFactory factory, 
+            ISessionFactory NhibernateSessionFactory,
+            IDbProfileConfig dbProfileConfig)
         {
             if (factory.Registrations.All(r => r.DependencyType != typeof(ISessionFactory)))
             {
-                factory.Register(
-                    new Registration<ISessionFactory>(NhibernateSessionFactory));
+                factory.Register(new Registration<IDbProfileConfig>(dbProfileConfig));
+                factory.Register(new Registration<ISessionFactory>(NhibernateSessionFactory));
                 factory.Register(new Registration<ISession>(c => c.Resolve<ISessionFactory>().OpenSession())
                 {
                     Mode = RegistrationMode.InstancePerHttpRequest
