@@ -57,17 +57,6 @@ namespace Autofac
         }
 
         /// <summary>
-        /// Provides access to the Contrib library <see cref="IDataSourceRepository"/>
-        /// </summary>
-        /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
-        /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder RegisterDataSourceRepository(this ContainerBuilder builder)
-        {
-            builder.RegisterType<DataSourceRepository>().AsSelf().As<IDataSourceRepository>();
-            return builder;
-        }
-
-        /// <summary>
         /// Provides access to the Contrib library <see cref="IRefreshTokenStore"/> provider
         /// </summary>
         /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
