@@ -72,7 +72,7 @@ task RunIntegraionTests -depends Compile, CopyConfigFile {
 }
 
 task ILMerge -depends Compile {
-	$input_dlls = "$output_directory\Core.Nhibernate.dll $output_directory\Automapper.dll"
+	$input_dlls = "$output_directory\Core.Nhibernate.dll"
 
 	New-Item $dist_directory\lib\net472 -Type Directory
 	
