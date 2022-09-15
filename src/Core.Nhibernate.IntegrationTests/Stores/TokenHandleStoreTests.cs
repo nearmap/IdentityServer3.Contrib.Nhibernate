@@ -26,17 +26,18 @@
 
 using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using Newtonsoft.Json;
+using NHibernate.Linq;
 using Xunit;
 
 using TokenModel = IdentityServer3.Core.Models.Token;
 using TokenEntity = IdentityServer3.Contrib.Nhibernate.Models.Token;
-using NHibernate.Linq;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
@@ -44,49 +45,33 @@ namespace Core.Nhibernate.IntegrationTests.Stores
     {
         private readonly TokenHandleStore sut;
 
-        protected TokenHandleStoreTests(IdentityServer3.Core.Models.IDbProfileConfig dbProfile) : base(dbProfile)
+        protected TokenHandleStoreTests(IMapper mapper) : base(mapper)
         {
-            sut = new TokenHandleStore(Session, ScopeStore, ClientStore, dbProfile);
+            sut = new TokenHandleStore(Session, ScopeStore, ClientStore, mapper);
         }
 
         private string GetJsonCodeFromRefreshToken(TokenModel code)
         {
-            var jsonBuilder = new StringBuilder();
-
-            jsonBuilder.Append("{");
-            jsonBuilder.Append($"\"Audience\":\"{code.Audience}\",");
-            jsonBuilder.Append($"\"Issuer\":\"{code.Issuer}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
-            jsonBuilder.Append($"\"Lifetime\":{code.Lifetime},");
-            jsonBuilder.Append($"\"Type\":\"{code.Type}\",");
-            jsonBuilder.Append("\"Client\":{");
-            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\"");
-            jsonBuilder.Append("},");
-            jsonBuilder.Append("\"Claims\":[");
-            foreach (var claim in code.Claims)
+            var obj = new
             {
-                jsonBuilder.Append("{");
-                jsonBuilder.Append("\"Type\":\"sub\",");
-                jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
-                jsonBuilder.Append("},");
-            }
-            // Remove the final comma appended above if it exists
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("],");
-            jsonBuilder.Append($"\"Version\":{code.Version},");
-            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
-            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
-            jsonBuilder.Append("\"Scopes\":[");
-            foreach (var scope in code.Scopes)
-            {
-                jsonBuilder.Append($"\"{scope}\",");
-            }
-            // Remove the final comma appended above if it exists
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("]");
-            jsonBuilder.Append("}");
+                code.Audience,
+                code.Issuer,
+                CreationTime = code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
+                code.Lifetime,
+                code.Type,
+                Client = new
+                {
+                    code.ClientId
+                },
+                Claims = code.Claims.Select(x => new { x.Type, x.Value }),
+                code.Version,
+                code.SubjectId,
+                code.ClientId,
+                Scopes = code.Scopes.Select(x => x),
 
-            return jsonBuilder.ToString();
+            };
+
+            return JsonConvert.SerializeObject(obj);
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ﻿using Autofac.Core.Registration;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Moq;
 using NHibernate;
@@ -14,15 +14,15 @@ namespace Core.Nhibernate.Tests
     {
         private readonly Mock<ISession> mockSession = new Mock<ISession>();
         private readonly Mock<ISessionFactory> mockSessionFactory = new Mock<ISessionFactory>();
-        private readonly Mock<IDbProfileConfig> mockProfileConfig = new Mock<IDbProfileConfig>();
+        private readonly Mock<IMapper> mockMapper = new Mock<IMapper>();
 
         private readonly DataSourceRepository sut;
         private readonly DataSourceRepository sutWithFactory;
 
         public DataSourceRepositoryTests()
         {
-            sut = new DataSourceRepository(mockSession.Object, mockProfileConfig.Object);
-            sutWithFactory = new DataSourceRepository(mockSessionFactory.Object, mockProfileConfig.Object);
+            sut = new DataSourceRepository(mockSession.Object, mockMapper.Object);
+            sutWithFactory = new DataSourceRepository(mockSessionFactory.Object, mockMapper.Object);
             mockSessionFactory.Setup(x => x.OpenSession())
                 .Returns(mockSession.Object);
         }

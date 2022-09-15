@@ -24,9 +24,12 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
+using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using NHibernate;
 using NHibernate.Linq;
@@ -35,15 +38,13 @@ using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
 using NHibTokenModel = IdentityServer3.Contrib.Nhibernate.Models.Token;
 using CoreTokenModel = IdentityServer3.Core.Models.Token;
 using CoreClientModel = IdentityServer3.Core.Models.Client;
-using System.Collections.Generic;
-using IdentityServer3.Core.Models;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class TokenHandleStore : BaseTokenStore<CoreTokenModel>, ITokenHandleStore
     {
-        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
-            : base(session, TokenType.TokenHandle, scopeStore, clientStore, dbProfile)
+        public TokenHandleStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, TokenType.TokenHandle, scopeStore, clientStore, mapper)
         {
 
         }
@@ -57,19 +58,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .Query<EntityTokenModel>()
                     .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
 
-            if (token == null)
-            {
-                return null;
-            }
+            if (token == null) { return null; }
 
             var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
 
             var tokenModel = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<CoreTokenModel>(tModel);
 
-            if (tokenModel == null)
-            {
-                return null;
-            }
+            if (tokenModel == null) { return null; }
 
             var clientEntity = await session.Query<ClientEntity>()
                 .SingleOrDefaultAsync(x => x.ClientId == tModel.ClientId);

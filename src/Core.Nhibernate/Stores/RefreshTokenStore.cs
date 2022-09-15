@@ -23,26 +23,27 @@
 */
 
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
+using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using NHibernate;
 using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 using RefToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
-using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using IdentityServer3.Core;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class RefreshTokenStore : BaseTokenStore<RefreshToken>, IRefreshTokenStore
     {
-        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
-            : base(session, TokenType.RefreshToken, scopeStore, clientStore, dbProfile)
+        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, TokenType.RefreshToken, scopeStore, clientStore, mapper)
         {
 
         }

@@ -26,6 +26,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
@@ -42,8 +43,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig dbProfile)
-            : base(session, dbProfile)
+        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, mapper)
         {
             ScopeStore = scopeStore ?? throw new ArgumentNullException(nameof(scopeStore));
             ClientStore = clientStore ?? throw new ArgumentNullException(nameof(clientStore));

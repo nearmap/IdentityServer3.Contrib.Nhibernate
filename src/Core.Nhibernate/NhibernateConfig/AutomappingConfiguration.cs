@@ -66,7 +66,7 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
         {
             var result = type.Namespace != null && type.Namespace.Equals("IdentityServer3.Contrib.Nhibernate.Entities")
                 && (_registerOperationalServices && _operationalServicesEntities.Contains(type)
-                || _registerConfigurationServices && _configurationServicesEntities.Contains(type));
+                    || _registerConfigurationServices && _configurationServicesEntities.Contains(type));
 
             return result;
         }

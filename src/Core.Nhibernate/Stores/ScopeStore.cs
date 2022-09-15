@@ -26,6 +26,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -35,8 +36,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ScopeStore : NhibernateStore, IScopeStore
     {
-        public ScopeStore(ISession session, Core.Models.IDbProfileConfig dbProfile) 
-            : base(session, dbProfile)
+        public ScopeStore(ISession session, IMapper mapper) 
+            : base(session, mapper)
         {
         }
 
@@ -72,11 +73,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             });
 
             return _mapper.Map<IEnumerable<Core.Models.Scope>>(scopes);
-        }
-
-        public object Save(Core.Models.Scope obj)
-        {
-            return SaveAsync(_mapper.Map<Scope>(obj)).Result;
         }
 
         public async Task<object> SaveAsync(Core.Models.Scope obj)

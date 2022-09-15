@@ -98,7 +98,7 @@ namespace Core.Nhibernate.IntegrationTests
                 .Without(t => t.Client)
                 .With(t => t.Claims, new List<Claim>()
                 {
-                    new Claim(Constants.ClaimTypes.Subject,subjectId ?? Guid.NewGuid().ToString())
+                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString())
                 });
 
             var token = tokenBuilder.Create();
@@ -135,7 +135,7 @@ namespace Core.Nhibernate.IntegrationTests
         }
 
         public static IEnumerable<Claim> GetClaims(int nClaimsToGet)
-            => Enumerable.Range(0, nClaimsToGet).Select(x => GetClaim());
+            => Enumerable.Range(0, nClaimsToGet).Select(x => GetClaim()).ToList();
 
         public static Claim GetClaim()
             => new Claim(AFixture.Create<string>(), AFixture.Create<string>());

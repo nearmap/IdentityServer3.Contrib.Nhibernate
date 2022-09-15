@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using IdentityServer3.Core.Models;
+using AutoMapper;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
@@ -9,24 +9,24 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         private readonly ContainerBuilder _containerBuilder;
         private IContainer _container;
 
-        public DataSourceRepository(ISession session, IDbProfileConfig config)
+        public DataSourceRepository(ISession session, IMapper mapper)
         {
             _containerBuilder = new ContainerBuilder();
 
             _containerBuilder.RegisterInstance(session).As<ISession>();
-            _containerBuilder.RegisterInstance(config).As<IDbProfileConfig>();
+            _containerBuilder.RegisterInstance(mapper).As<IMapper>();
 
             _containerBuilder.RegisterAssemblyTypes(typeof(DataSourceRepository).Assembly)
                 .AsImplementedInterfaces();
         }
 
-        public DataSourceRepository(ISessionFactory sessionFactory, IDbProfileConfig config)
+        public DataSourceRepository(ISessionFactory sessionFactory, IMapper mapper)
         {
             _containerBuilder = new ContainerBuilder();
 
             _containerBuilder.RegisterInstance(sessionFactory).As<ISessionFactory>().SingleInstance();
             _containerBuilder.Register(c => c.Resolve<ISessionFactory>().OpenSession()).InstancePerLifetimeScope();
-            _containerBuilder.RegisterInstance(config).As<IDbProfileConfig>();
+            _containerBuilder.RegisterInstance(mapper).As<IMapper>();
 
             _containerBuilder.RegisterAssemblyTypes(typeof(DataSourceRepository).Assembly)
                 .AsImplementedInterfaces();

@@ -22,13 +22,14 @@
 *SOFTWARE.
 */
 
+using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Models;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class TokenHandleStoreTestsNpgsql6 : TokenHandleStoreTests
     {
-        public TokenHandleStoreTestsNpgsql6() : base(new Npgsql6ProviderConfig())
+        public TokenHandleStoreTestsNpgsql6() : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql6()))
         {
         }
     }

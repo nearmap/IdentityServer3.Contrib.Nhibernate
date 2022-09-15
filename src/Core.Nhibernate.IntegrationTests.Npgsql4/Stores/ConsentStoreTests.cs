@@ -22,13 +22,15 @@
 *SOFTWARE.
 */
 
+using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Models;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ConsentStoreTestsNpgsql4 : ConsentStoreTests
     {
-        public ConsentStoreTestsNpgsql4() : base(new Npgsql4ProviderConfig())
+        public ConsentStoreTestsNpgsql4()
+            : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql4()))
         {
         }
     }

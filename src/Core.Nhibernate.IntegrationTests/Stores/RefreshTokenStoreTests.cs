@@ -26,13 +26,14 @@
 
 using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
+using Newtonsoft.Json;
 using NHibernate.Linq;
 using Xunit;
 
@@ -49,9 +50,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private RefreshToken testCode;
         private Token tokenHandle;
 
-        protected RefreshTokenStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
+        protected RefreshTokenStoreTests(IMapper mapper) : base(mapper)
         {
-            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, dbProfile);
+            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, mapper);
         }
 
         private async Task SetupTestData()
@@ -74,71 +75,39 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         private string GetJsonCodeFromRefreshToken(RefreshToken code)
         {
-            var jsonBuilder = new StringBuilder();
+            var obj = new
+            {
+                code.ClientId,
+                CreationTime = code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
+                code.LifeTime,
+                AccessToken = new
+                {
+                    code.AccessToken.Audience,
+                    code.AccessToken.Issuer,
+                    CreationTime = code.AccessToken.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
+                    code.AccessToken.Lifetime,
+                    code.AccessToken.Type,
+                    Client = new
+                    {
+                        code.ClientId
+                    },
+                    Claims = code.AccessToken.Claims.Select(x => new { x.Type, x.Value }),
+                    code.AccessToken.Version,
+                    code.SubjectId,
+                    code.ClientId,
+                    Scopes = code.AccessToken.Scopes.Select(x => x),
+                },
+                Subject = new
+                {
+                    code.Subject.Identity.AuthenticationType,
+                    Claims = code.Subject.Claims.Select(x => new { x.Type, x.Value }),
+                },
+                code.Version,
+                code.SubjectId,
+                Scopes = code.Scopes.Select(x => x)
+            };
 
-            jsonBuilder.Append("{");
-            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
-            jsonBuilder.Append($"\"LifeTime\":{code.LifeTime},");
-            jsonBuilder.Append("\"AccessToken\":{");
-            jsonBuilder.Append($"\"Audience\":\"{code.AccessToken.Audience}\",");
-            jsonBuilder.Append($"\"Issuer\":\"{code.AccessToken.Issuer}\",");
-            jsonBuilder.Append($"\"CreationTime\":\"{code.AccessToken.CreationTime:yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz}\",");
-            jsonBuilder.Append($"\"Lifetime\":{code.AccessToken.Lifetime},");
-            jsonBuilder.Append($"\"Type\":\"{code.AccessToken.Type}\",");
-            jsonBuilder.Append("\"Client\":{");
-            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\"");
-            jsonBuilder.Append("},");
-            jsonBuilder.Append("\"Claims\":[");
-            
-            foreach(var accesTokenClaim in code.AccessToken.Claims)
-            {
-                jsonBuilder.Append("{");
-                jsonBuilder.Append($"\"Type\":\"{accesTokenClaim.Type}\",");
-                jsonBuilder.Append($"\"Value\":\"{accesTokenClaim.Value}\"");
-                jsonBuilder.Append("},");
-            }
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("],");
-            jsonBuilder.Append($"\"Version\":{code.AccessToken.Version},");
-            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
-            jsonBuilder.Append($"\"ClientId\":\"{code.ClientId}\",");
-            jsonBuilder.Append("\"Scopes\":[");
-            foreach (var scope in code.AccessToken.Scopes)
-            {
-                jsonBuilder.Append($"\"{scope}\",");
-            }
-            // Remove the final comma appended above if it exists
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("]");
-            jsonBuilder.Append("},");
-            jsonBuilder.Append("\"Subject\":{");
-            jsonBuilder.Append($"\"AuthenticationType\":\"{code.Subject.Identity.AuthenticationType}\",");
-            jsonBuilder.Append("\"Claims\":[");
-            foreach (var claim in code.Subject.Claims)
-            {
-                jsonBuilder.Append("{");
-                jsonBuilder.Append($"\"Type\":\"{claim.Type}\",");
-                jsonBuilder.Append($"\"Value\":\"{claim.Value}\"");
-                jsonBuilder.Append("},");
-            }
-            // Remove the final comma appended above if it exists
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("]");
-            jsonBuilder.Append("},");
-            jsonBuilder.Append($"\"Version\":{code.Version},");
-            jsonBuilder.Append($"\"SubjectId\":\"{code.SubjectId}\",");
-            jsonBuilder.Append("\"Scopes\":[");
-            foreach (var scope in code.Scopes)
-            {
-                jsonBuilder.Append($"\"{scope}\",");
-            }
-            // Remove the final comma appended above if it exists
-            RemoveTrailingComma(jsonBuilder);
-            jsonBuilder.Append("]");
-            jsonBuilder.Append("}");
-
-            return jsonBuilder.ToString();
+            return JsonConvert.SerializeObject(obj);
         }
 
         [Fact]

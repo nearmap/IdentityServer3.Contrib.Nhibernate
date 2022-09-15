@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
@@ -41,8 +42,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class AuthorizationCodeStore : BaseTokenStore<AuthorizationCode>, IAuthorizationCodeStore
     {
-        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IDbProfileConfig profile)
-            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore, profile)
+        public AuthorizationCodeStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, TokenType.AuthorizationCode, scopeStore, clientStore, mapper)
         {
 
         }
@@ -55,19 +56,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .Query<Token>()
                     .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
 
-                if (token == null)
-                {
-                    return null;
-                }
+                if (token == null) { return null; }
 
                 var authCode = ConvertFromJson<AuthCode>(token.JsonCode);
 
                 var code = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<AuthorizationCode>(authCode);
 
-                if (code == null)
-                {
-                    return null;
-                }
+                if (code == null) { return null; }
 
                 code.Client = await ClientStore.FindClientByIdAsync(authCode.ClientId);
                 code.RequestedScopes = (await ScopeStore.FindScopesAsync(
@@ -90,10 +85,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                     .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
                     .ToListAsync();
 
-                if (!tokens.Any())
-                {
-                    return new List<ITokenMetadata>();
-                }
+                if (!tokens.Any()) { return new List<ITokenMetadata>(); }
 
                 var tokenList = new List<ITokenMetadata>();
 
@@ -103,10 +95,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
                     var code = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<AuthorizationCode>(authCode);
 
-                    if (code == null)
-                    {
-                        continue;
-                    }
+                    if (code == null) { continue; }
 
                     code.Client = await ClientStore.FindClientByIdAsync(authCode.ClientId);
                     code.RequestedScopes = (await ScopeStore.FindScopesAsync(
@@ -137,8 +126,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             };
 
             await SaveAsync(nhCode);
-
-            await Task.CompletedTask;
         }
     }
 }

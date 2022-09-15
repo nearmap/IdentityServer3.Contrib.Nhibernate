@@ -27,7 +27,6 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using AutoMapper;
-using IdentityServer3.Core.Models;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
@@ -37,33 +36,14 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         protected readonly IMapper _mapper;
         private readonly ISession _nhSession;
 
-        protected NhibernateStore(ISession session, IDbProfileConfig dbProfile)
+        protected NhibernateStore(ISession session, IMapper mapper)
         {
-            _mapper = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile(dbProfile?.GetProfile() ?? new EntitiesProfile());
-            })
-                .CreateMapper();
-
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         protected async Task<object> SaveAsync(object obj)
             => await ExecuteInTransactionAsync(session => session.SaveAsync(obj));
-
-        [Obsolete("Use ExecuteInTransactionAsync method instead")]
-        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
-            => ExecuteInTransactionAsync(
-                session => { actionToExecute(session); return Task.CompletedTask; },
-                isolationLevel)
-            .GetAwaiter().GetResult();
-
-        [Obsolete("Use ExecuteInTransactionAsync method instead")]
-        protected T ExecuteInTransaction<T>(Func<ISession, T> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
-            => ExecuteInTransactionAsync(
-                session => { return Task.FromResult(actionToExecute(session)); },
-                isolationLevel)
-                .GetAwaiter().GetResult();
 
         protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {

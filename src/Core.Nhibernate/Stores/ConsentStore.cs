@@ -26,6 +26,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -35,17 +36,22 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ConsentStore : NhibernateStore, IConsentStore
     {
-        public ConsentStore(ISession session, Core.Models.IDbProfileConfig dbProfile)
-            : base(session, dbProfile)
+        public ConsentStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
         public async Task<Core.Models.Consent> LoadAsync(string subject, string client)
         {
             var item = await ExecuteInTransactionAsync(async session =>
-                await session.Query<Consent>()
-                    .SingleOrDefaultAsync(c => c.Subject == subject && c.ClientId == client)
-            );
+            {
+                var consent = await session.Query<Consent>()
+                    .SingleOrDefaultAsync(c => c.Subject == subject && c.ClientId == client);
+
+                _ = consent?.Scopes; // Force access of the Scopes link within the transaction.
+
+                return consent;
+            });
 
             return item == null
                 ? null
@@ -58,7 +64,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         }
 
         public async Task UpdateAsync(Core.Models.Consent consent)
-            => await ExecuteInTransactionAsync(session => UpdateInnerAsync(session, consent));
+            => await ExecuteInTransactionAsync(async session => await UpdateInnerAsync(session, consent));
 
         private async Task UpdateInnerAsync(ISession session, Core.Models.Consent consent)
         {
@@ -67,10 +73,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             if (item == null)
             {
-                if (!consent.Scopes?.Any() ?? true)
-                {
-                    return;
-                }
+                if (!consent.Scopes?.Any() ?? true) { return; }
 
                 item = new Consent
                 {
@@ -87,7 +90,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 {
                     await session.DeleteAsync(item);
                 }
-                
                 
                 item.Scopes = string.Join(",", consent.Scopes);
                 await session.SaveOrUpdateAsync(item);

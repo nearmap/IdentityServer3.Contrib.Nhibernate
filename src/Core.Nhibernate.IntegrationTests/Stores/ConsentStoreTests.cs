@@ -28,6 +28,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.Stores;
@@ -45,9 +46,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private Consent testConsent2 = ObjectCreator.GetConsent();
         private readonly Consent testConsent3 = ObjectCreator.GetConsent();
 
-        protected ConsentStoreTests(IdentityServer3.Core.Models.IDbProfileConfig dbProfile) : base(dbProfile)
+        protected ConsentStoreTests(IMapper mapper) : base(mapper)
         {
-            sut = new ConsentStore(Session, dbProfile);
+            sut = new ConsentStore(Session, mapper);
         }
 
         [Fact]

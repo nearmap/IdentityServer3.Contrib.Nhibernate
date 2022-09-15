@@ -22,13 +22,14 @@
 *SOFTWARE.
 */
 
+using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Models;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class AuthorizationCodeStoreTestsNpgSql6 : AuthorizationCodeStoreTests
     {
-        public AuthorizationCodeStoreTestsNpgSql6() : base(new Npgsql6ProviderConfig())
+        public AuthorizationCodeStoreTestsNpgSql6() : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql6()))
         {
         }
     }

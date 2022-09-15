@@ -15,52 +15,42 @@ namespace IdentityServer3.Core.Models // TODO - relocate this namespace
         public EntitiesProfile()
         {
             CreateMap<CoreModels.Scope, Entities.Scope>(MemberList.Source)
-                .ForMember(x => x.ScopeClaims, opts => opts.MapFrom(src => src.Claims.Select(x => x)))
-                .ForMember(x => x.ScopeSecrets, opts => opts.MapFrom(src => src.ScopeSecrets.Select(x => x)));
+                .ForMember(x => x.ScopeClaims, opts => opts.MapFrom(src => src.Claims.Select(x => x).ToList()))
+                .ForMember(x => x.ScopeSecrets, opts => opts.MapFrom(src => src.ScopeSecrets.Select(x => x).ToList()));
 
             CreateMap<CoreModels.ScopeClaim, Entities.ScopeClaim>(MemberList.Source);
 
-            CreateMap<CoreModels.Secret, Entities.ScopeSecret>(MemberList.Source)
-            .ForMember(x => x.Expiration, opts => opts.MapFrom(
-                src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
+            CreateMap<CoreModels.Secret, Entities.ScopeSecret>(MemberList.Source);
 
-            CreateMap<CoreModels.Secret, Entities.ClientSecret>(MemberList.Source)
-                .ForMember(x => x.Expiration, opts => opts.MapFrom(
-                    src => src.Expiration.HasValue ? (DateTime?)src.Expiration.Value.DateTime.ToUniversalTime() : null));
+            CreateMap<CoreModels.Secret, Entities.ClientSecret>(MemberList.Source);
+
+            CreateMap<DateTimeOffset, DateTime>().ConstructUsing(dto => dto.UtcDateTime);
 
             CreateMap<CoreModels.Client, Entities.Client>(MemberList.Source)
                 .ForMember(x => x.UpdateAccessTokenOnRefresh,
                     opt => opt.MapFrom(src => src.UpdateAccessTokenClaimsOnRefresh))
                 .ForMember(x => x.AllowAccessToAllGrantTypes,
-                    opt => opt.MapFrom(src => src.AllowAccessToAllCustomGrantTypes))
-                .ForMember(x => x.ClientSecrets, opt => opt.MapFrom(src => src.ClientSecrets))
-                .ForMember(x => x.AllowedCustomGrantTypes,
-                    opt => opt.MapFrom(
-                        src => src.AllowedCustomGrantTypes.Select(
-                            x => new Entities.ClientCustomGrantType { GrantType = x })))
-                .ForMember(x => x.RedirectUris,
-                    opt =>
-                        opt.MapFrom(src => src.RedirectUris.Select(x => new Entities.ClientRedirectUri { Uri = x })))
-                .ForMember(x => x.PostLogoutRedirectUris,
-                    opt => opt.MapFrom(
-                        src => src.PostLogoutRedirectUris.Select(
-                            x => new Entities.ClientPostLogoutRedirectUri { Uri = x })))
-                .ForMember(x => x.IdentityProviderRestrictions,
-                    opt => opt.MapFrom(
-                        src => src.IdentityProviderRestrictions.Select(
-                            x => new Entities.ClientIdPRestriction { Provider = x })))
-                .ForMember(x => x.AllowedScopes,
-                    opt => opt.MapFrom(src => src.AllowedScopes.Select(x => new Entities.ClientScope { Scope = x })))
-                .ForMember(x => x.AllowedCorsOrigins,
-                    opt => opt.MapFrom(
-                        src => src.AllowedCorsOrigins.Select(x => new Entities.ClientCorsOrigin { Origin = x })))
-                .ForMember(x => x.Claims,
-                    opt => opt.MapFrom(
-                        src => src.Claims.Select(x => new Entities.ClientClaim { Type = x.Type, Value = x.Value })));
+                    opt => opt.MapFrom(src => src.AllowAccessToAllCustomGrantTypes));
+
+            CreateMap<Claim, Entities.ClientClaim>();
+
+            CreateMap<Entities.ClientClaim, Claim>();
+
+            CreateMap<string, Entities.ClientScope>().ForMember(x => x.Scope, opt => opt.MapFrom(src => src));
+
+            CreateMap<string, Entities.ClientCorsOrigin>().ForMember(x => x.Origin, opt => opt.MapFrom(src => src));
+
+            CreateMap<string, Entities.ClientCustomGrantType>().ForMember(x => x.GrantType, opt => opt.MapFrom(src => src));
+
+            CreateMap<string, Entities.ClientIdPRestriction>().ForMember(x => x.Provider, opt => opt.MapFrom(src => src));
+
+            CreateMap<string, Entities.ClientRedirectUri>().ForMember(x => x.Uri, opt => opt.MapFrom(src => src));
+
+            CreateMap<string, Entities.ClientPostLogoutRedirectUri>().ForMember(x => x.Uri, opt => opt.MapFrom(src => src));
 
             CreateMap<Entities.Scope, CoreModels.Scope>(MemberList.Destination)
-                    .ForMember(x => x.Claims, opts => opts.MapFrom(src => src.ScopeClaims.Select(x => x)))
-                    .ForMember(x => x.ScopeSecrets, opts => opts.MapFrom(src => src.ScopeSecrets.Select(x => x)));
+                    .ForMember(x => x.Claims, opts => opts.MapFrom(src => src.ScopeClaims.Select(x => x).ToList()))
+                    .ForMember(x => x.ScopeSecrets, opts => opts.MapFrom(src => src.ScopeSecrets.Select(x => x).ToList()));
 
             CreateMap<Entities.ScopeClaim, CoreModels.ScopeClaim>(MemberList.Destination);
 
@@ -74,20 +64,18 @@ namespace IdentityServer3.Core.Models // TODO - relocate this namespace
                 .ForMember(x => x.AllowAccessToAllCustomGrantTypes,
                     opt => opt.MapFrom(src => src.AllowAccessToAllGrantTypes))
                 .ForMember(x => x.AllowedCustomGrantTypes,
-                    opt => opt.MapFrom(src => src.AllowedCustomGrantTypes.Select(x => x.GrantType)))
-                .ForMember(x => x.RedirectUris, opt => opt.MapFrom(src => src.RedirectUris.Select(x => x.Uri)))
+                    opt => opt.MapFrom(src => src.AllowedCustomGrantTypes.Select(x => x.GrantType).ToList()))
+                .ForMember(x => x.RedirectUris, opt => opt.MapFrom(src => src.RedirectUris.Select(x => x.Uri).ToList()))
                 .ForMember(x => x.PostLogoutRedirectUris,
-                    opt => opt.MapFrom(src => src.PostLogoutRedirectUris.Select(x => x.Uri)))
+                    opt => opt.MapFrom(src => src.PostLogoutRedirectUris.Select(x => x.Uri).ToList()))
                 .ForMember(x => x.IdentityProviderRestrictions,
-                    opt => opt.MapFrom(src => src.IdentityProviderRestrictions.Select(x => x.Provider)))
-                .ForMember(x => x.AllowedScopes, opt => opt.MapFrom(src => src.AllowedScopes.Select(x => x.Scope)))
+                    opt => opt.MapFrom(src => src.IdentityProviderRestrictions.Select(x => x.Provider).ToList()))
+                .ForMember(x => x.AllowedScopes, opt => opt.MapFrom(src => src.AllowedScopes.Select(x => x.Scope).ToList()))
                 .ForMember(x => x.AllowedCorsOrigins,
-                    opt => opt.MapFrom(src => src.AllowedCorsOrigins.Select(x => x.Origin)))
-                .ForMember(x => x.Claims,
-                    opt => opt.MapFrom(src => src.Claims.Select(x => new Claim(x.Type, x.Value))));
+                    opt => opt.MapFrom(src => src.AllowedCorsOrigins.Select(x => x.Origin).ToList()));
 
             CreateMap<Entities.Consent, CoreModels.Consent>()
-                .ForMember(dest => dest.Scopes,
+                .ForMember(dest => dest.Scopes, 
                     opt => opt.MapFrom(src => src.Scopes.Split(',')));
 
             CreateMap<CoreModels.Consent, Entities.Consent>()
@@ -100,11 +88,15 @@ namespace IdentityServer3.Core.Models // TODO - relocate this namespace
 
             CreateMap<CoreModels.AuthorizationCode, ContribModels.AuthorizationCode>()
                 .ForMember(dest => dest.Scopes, opt => opt.Ignore());
+
             CreateMap<Claim, ContribModels.ClaimLite>();
+
             CreateMap<ClaimsPrincipal, ContribModels.ClaimsPrincipalLite>()
                 .ForMember(dest => dest.AuthenticationType,
                     opt => opt.MapFrom(src => src.Identity.AuthenticationType));
+
             CreateMap<CoreModels.Client, ContribModels.ClientLite>();
+
             CreateMap<CoreModels.Scope, ContribModels.ScopeLite>();
 
             CreateMap<CoreModels.RefreshToken, ContribModels.RefreshToken>()
@@ -137,12 +129,12 @@ namespace IdentityServer3.Core.Models // TODO - relocate this namespace
 
         private IEnumerable<Claim> GetClaims(IEnumerable<ContribModels.ClaimLite> claims)
         {
-            return claims.Select(source => new Claim(source.Type, source.Value));
+            return claims.Select(source => new Claim(source.Type, source.Value)).ToList();
         }
 
         private ClaimsPrincipal GetClaimsPrincipal(ContribModels.ClaimsPrincipalLite source)
         {
-            var claims = source.Claims.Select(x => new Claim(x.Type, x.Value));
+            var claims = source.Claims.Select(x => new Claim(x.Type, x.Value)).ToList();
             var id = new ClaimsIdentity(
                 claims, 
                 source.AuthenticationType,

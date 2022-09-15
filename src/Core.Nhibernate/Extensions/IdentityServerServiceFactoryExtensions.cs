@@ -4,26 +4,25 @@ using IdentityServer3.Core.Services;
 using NHibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
+using AutoMapper;
 
 namespace IdentityServer3.Core.Configuration
 {
     public static class IdentityServerServiceFactoryExtensions
     {
-
         public static void RegisterNhibernateStores(this IdentityServerServiceFactory factory,
             ISessionFactory nHibernateSessionFactory,
-            IDbProfileConfig dbProfileConfig, 
+            IMapper mapper,
             bool registerOperationalServices = false, 
             bool registerConfigurationServices = false)
         {
             _ = factory ?? throw new ArgumentNullException(nameof(factory));
             _ = nHibernateSessionFactory ?? throw new ArgumentNullException(nameof(nHibernateSessionFactory));
-            _ = dbProfileConfig ?? throw new ArgumentNullException(nameof(dbProfileConfig));
+            _ = mapper ?? throw new ArgumentNullException(nameof(mapper));
 
             if (registerOperationalServices || registerConfigurationServices)
             {
-                RegisterSessionFactory(factory, nHibernateSessionFactory, dbProfileConfig);
+                RegisterSessionFactory(factory, nHibernateSessionFactory, mapper);
             }
 
             if (registerOperationalServices)
@@ -36,6 +35,7 @@ namespace IdentityServer3.Core.Configuration
                 RegisterConfigurationServices(factory);
             }
         }
+
         private static void RegisterOperationalServices(IdentityServerServiceFactory factory)
         {
             factory.AuthorizationCodeStore = new Registration<IAuthorizationCodeStore, AuthorizationCodeStore>();
@@ -54,11 +54,11 @@ namespace IdentityServer3.Core.Configuration
         private static void RegisterSessionFactory(
             IdentityServerServiceFactory factory, 
             ISessionFactory NhibernateSessionFactory,
-            IDbProfileConfig dbProfileConfig)
+            IMapper mapper)
         {
             if (factory.Registrations.All(r => r.DependencyType != typeof(ISessionFactory)))
             {
-                factory.Register(new Registration<IDbProfileConfig>(dbProfileConfig));
+                factory.Register(new Registration<IMapper>(mapper));
                 factory.Register(new Registration<ISessionFactory>(NhibernateSessionFactory));
                 factory.Register(new Registration<ISession>(c => c.Resolve<ISessionFactory>().OpenSession())
                 {

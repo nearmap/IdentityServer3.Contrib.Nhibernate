@@ -28,14 +28,12 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
-using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using FluentNHibernate.Cfg;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Postgres;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
 using NHibernate;
@@ -59,29 +57,16 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseStoreTests(IDbProfileConfig dbProfile)
+        protected BaseStoreTests(IMapper mapper)
         {
-            Mapper = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile(dbProfile?.GetProfile() ?? new EntitiesProfile());
-            })
-                .CreateMapper();
-
+            Mapper = mapper;
             NhSessionFactory = GetNHibernateSessionFactory();
 
             _readSession = NhSessionFactory.OpenSession();
             Session = NhSessionFactory.OpenSession();
 
-            ScopeStore = new ScopeStore(Session, dbProfile);
-            ClientStore = new ClientStore(Session, dbProfile);
-        }
-
-        protected void RemoveTrailingComma(StringBuilder jsonBuilder)
-        {
-            if (jsonBuilder[jsonBuilder.Length - 1] == ',')
-            {
-                jsonBuilder.Remove(jsonBuilder.Length - 1, 1);
-            }
+            ScopeStore = new ScopeStore(Session, mapper);
+            ClientStore = new ClientStore(Session, mapper);
         }
 
         private ISessionFactory GetNHibernateSessionFactory()

@@ -24,6 +24,7 @@
 
 
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -33,8 +34,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ClientStore : NhibernateStore, IClientStore
     {
-        public ClientStore(ISession session, Core.Models.IDbProfileConfig dbProfile)
-            : base(session, dbProfile)
+        public ClientStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
@@ -47,11 +48,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             );
 
             return _mapper.Map<Core.Models.Client>(client);
-        }
-
-        public object Save(Core.Models.Client obj)
-        {
-            return SaveAsync(_mapper.Map<Client>(obj)).Result;
         }
 
         public async Task<object> SaveAsync(Core.Models.Client obj)

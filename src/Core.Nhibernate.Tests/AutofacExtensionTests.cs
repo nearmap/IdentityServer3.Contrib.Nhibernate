@@ -1,7 +1,7 @@
 ﻿using Autofac;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Moq;
 using NHibernate;
@@ -11,46 +11,44 @@ namespace Core.Nhibernate.Tests
 {
     public class AutofacExtensionTests
     {
-        private readonly Mock<ISession> mockSession = new Mock<ISession>();
-        private readonly Mock<IDbProfileConfig> mockProfileConfig = new Mock<IDbProfileConfig>();
-
         private readonly ContainerBuilder sut;
 
         public AutofacExtensionTests()
         {
             sut = new ContainerBuilder();
-            sut.RegisterInstance(mockSession.Object);
-            sut.RegisterInstance(mockProfileConfig.Object);
+            sut.RegisterInstance(new Mock<ISession>().Object);
+            sut.RegisterInstance(new Mock<IMapper>().Object);
         }
 
         [Fact]
         public void UseAuthorizationCodeStore_ResolvesAuthorizationCodeStore()
-            => sut.UseAuthorizationCodeStore().ShouldResolve<IAuthorizationCodeStore, AuthorizationCodeStore>();
+            => sut.RegisterAuthorizationCodeStore().ShouldResolve<IAuthorizationCodeStore, AuthorizationCodeStore>();
 
         [Fact]
         public void UseClientStore_ResolvesClientStore()
-            => sut.UseClientStore().ShouldResolve<IClientStore, ClientStore>();
+            => sut.RegisterClientStore().ShouldResolve<IClientStore, ClientStore>();
 
         [Fact]
         public void UseConsentStore_ResolvesConsentStore()
-            => sut.UseConsentStore().ShouldResolve<IConsentStore, ConsentStore>();
+            => sut.RegisterConsentStore().ShouldResolve<IConsentStore, ConsentStore>();
 
         [Fact]
         public void UseRefreshTokenStore_ResolvesRefreshTokenStore()
-            => sut.UseRefreshTokenStore().ShouldResolve<IRefreshTokenStore, RefreshTokenStore>();
+            => sut.RegisterRefreshTokenStore().ShouldResolve<IRefreshTokenStore, RefreshTokenStore>();
 
 
         [Fact]
         public void UseScopeStore_ReturnsScopeStore()
-            => sut.UseScopeStore().ShouldResolve<IScopeStore, ScopeStore>();
+            => sut.RegisterScopeStore().ShouldResolve<IScopeStore, ScopeStore>();
 
         [Fact]
         public void UseTokenHandleStore_ResolvesTokenHandleStore()
-            => sut.UseTokenHandleStore().ShouldResolve<ITokenHandleStore, TokenHandleStore>();
+            => sut.RegisterTokenHandleStore().ShouldResolve<ITokenHandleStore, TokenHandleStore>();
 
         [Fact]
-        public void UseAllContribDataSources_ResolvesTokenHandleStore()
-            => sut.UseAllContribDataSources()
+        public void UseAllContribDataSources_ResolvesAllStores()
+            => sut
+                .UseAllContribDataSources()
                 .ShouldResolve<IAuthorizationCodeStore, AuthorizationCodeStore>().And
                 .ShouldResolve<IClientStore, ClientStore>().And
                 .ShouldResolve<IConsentStore, ConsentStore>().And
@@ -60,15 +58,7 @@ namespace Core.Nhibernate.Tests
 
         [Fact]
         public void UseDataSourceRepository_ResolvesDataSourceRepository()
-            => sut.UseDataSourceRepository().ShouldResolve<IDataSourceRepository, DataSourceRepository>();
-
-        [Fact]
-        public void UseNpgsql4ProviderConfig_ResolvesNpgsql4ProviderConfig()
-            => sut.UseNpgsql4ProviderConfig().ShouldResolve<IDbProfileConfig, Npgsql4ProviderConfig>();
-
-        [Fact]
-        public void UseNpgsql6ProviderConfig_ResolvesNpgsql6ProviderConfig()
-            => sut.UseNpgsql6ProviderConfig().ShouldResolve<IDbProfileConfig, Npgsql6ProviderConfig>();
+            => sut.RegisterDataSourceRepository().ShouldResolve<IDataSourceRepository, DataSourceRepository>();
     }
 
     internal static class TestExtensions

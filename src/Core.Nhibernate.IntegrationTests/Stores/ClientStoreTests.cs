@@ -26,9 +26,9 @@
 
 using System;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Xunit;
 
@@ -45,9 +45,9 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         private readonly ClientEntity testClient2Entity;
         private readonly ClientEntity testClient3Entity;
 
-        protected ClientStoreTests(IDbProfileConfig dbProfile) : base(dbProfile)
+        protected ClientStoreTests(IMapper mapper) : base(mapper)
         {
-            sut = new ClientStore(Session, dbProfile);
+            sut = new ClientStore(Session, mapper);
 
             testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
             testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());

@@ -1,5 +1,6 @@
-﻿using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
+﻿using AutoMapper;
+using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
+using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Services;
 
 namespace Autofac
@@ -7,24 +8,14 @@ namespace Autofac
     public static class AutofacExtensions
     {
         /// <summary>
-        /// Use mapping profile required for correct data interpretation with Npgsql 4 driver
+        /// Register AutoMapper instance using given profiles
         /// </summary>
-        /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
-        /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseNpgsql4ProviderConfig(this ContainerBuilder builder)
+        /// <param name="builder">The AutoFac container builder</param>
+        /// <param name="profileConfigs">AutoMapper profiles to apply to the mapper</param>
+        /// <returns>A <see cref="ContainerBuilder"/></returns>
+        public static ContainerBuilder RegisterAutoMapper(this ContainerBuilder builder, params Profile[] profileConfigs)
         {
-            builder.RegisterType<Npgsql4ProviderConfig>().As<IDbProfileConfig>();
-            return builder;
-        }
-
-        /// <summary>
-        /// Use mapping profile required for correct data interpretation with Npgsql 6 driver
-        /// </summary>
-        /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
-        /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseNpgsql6ProviderConfig(this ContainerBuilder builder)
-        {
-            builder.RegisterType<Npgsql6ProviderConfig>().As<IDbProfileConfig>();
+            builder.RegisterInstance(MappingHelper.CreateMapper(profileConfigs));
             return builder;
         }
 
@@ -36,7 +27,7 @@ namespace Autofac
         /// <see cref="IClientStore"/> and <see cref="IScopeStore"/> providers must be provided to the
         /// Autofac container</param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseAuthorizationCodeStore(this ContainerBuilder builder, bool useInternalSupport = true)
+        public static ContainerBuilder RegisterAuthorizationCodeStore(this ContainerBuilder builder, bool useInternalSupport = true)
         {
             builder.RegisterBaseSources(useInternalSupport);
             builder.RegisterType<AuthorizationCodeStore>().AsSelf().As<IAuthorizationCodeStore>();
@@ -48,7 +39,7 @@ namespace Autofac
         /// </summary>
         /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseClientStore(this ContainerBuilder builder)
+        public static ContainerBuilder RegisterClientStore(this ContainerBuilder builder)
         {
             builder.RegisterType<ClientStore>().AsSelf().As<IClientStore>();
             return builder;
@@ -59,7 +50,7 @@ namespace Autofac
         /// </summary>
         /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseConsentStore(this ContainerBuilder builder)
+        public static ContainerBuilder RegisterConsentStore(this ContainerBuilder builder)
         {
             builder.RegisterType<ConsentStore>().AsSelf().As<IConsentStore>();
             return builder;
@@ -70,7 +61,7 @@ namespace Autofac
         /// </summary>
         /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseDataSourceRepository(this ContainerBuilder builder)
+        public static ContainerBuilder RegisterDataSourceRepository(this ContainerBuilder builder)
         {
             builder.RegisterType<DataSourceRepository>().AsSelf().As<IDataSourceRepository>();
             return builder;
@@ -84,7 +75,7 @@ namespace Autofac
         /// <see cref="IClientStore"/> and <see cref="IScopeStore"/> providers must be provided to the
         /// Autofac container</param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseRefreshTokenStore(this ContainerBuilder builder, bool useInternalSupport = true)
+        public static ContainerBuilder RegisterRefreshTokenStore(this ContainerBuilder builder, bool useInternalSupport = true)
         {
             builder.RegisterBaseSources(useInternalSupport);
             builder.RegisterType<RefreshTokenStore>().AsSelf().As<IRefreshTokenStore>();
@@ -96,7 +87,7 @@ namespace Autofac
         /// </summary>
         /// <param name="builder">The <see cref="Autofac.ContainerBuilder"/></param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseScopeStore(this ContainerBuilder builder)
+        public static ContainerBuilder RegisterScopeStore(this ContainerBuilder builder)
         {
             builder.RegisterType<ScopeStore>().AsSelf().As<IScopeStore>();
             return builder;
@@ -110,7 +101,7 @@ namespace Autofac
         /// <see cref="IClientStore"/> and <see cref="IScopeStore"/> providers must be provided to the
         /// Autofac container</param>
         /// <returns>The <see cref="Autofac.ContainerBuilder"/> instance for method chaining</returns>
-        public static ContainerBuilder UseTokenHandleStore(this ContainerBuilder builder, bool useInternalSupport = true)
+        public static ContainerBuilder RegisterTokenHandleStore(this ContainerBuilder builder, bool useInternalSupport = true)
         {
             builder.RegisterBaseSources(useInternalSupport);
             builder.RegisterType<TokenHandleStore>().AsSelf().As<ITokenHandleStore>();
@@ -121,8 +112,8 @@ namespace Autofac
         {
             if (useInternalSupport)
             {
-                builder.RegisterType<ClientStore>().AsSelf().As<IClientStore>();
-                builder.RegisterType<ScopeStore>().AsSelf().As<IScopeStore>();
+                builder.RegisterClientStore();
+                builder.RegisterScopeStore();
             }
             
             return builder;
