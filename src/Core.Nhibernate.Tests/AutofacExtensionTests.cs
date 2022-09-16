@@ -55,10 +55,6 @@ namespace Core.Nhibernate.Tests
                 .ShouldResolve<IRefreshTokenStore, RefreshTokenStore>().And
                 .ShouldResolve<IScopeStore, ScopeStore>().And
                 .ShouldResolve<ITokenHandleStore, TokenHandleStore>();
-
-        [Fact]
-        public void UseDataSourceRepository_ResolvesDataSourceRepository()
-            => sut.RegisterDataSourceRepository().ShouldResolve<IDataSourceRepository, DataSourceRepository>();
     }
 
     internal static class TestExtensions
