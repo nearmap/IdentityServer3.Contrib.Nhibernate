@@ -35,22 +35,9 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
     public static class MappingHelper
     {
-        public static AutoPersistenceModel GetNhibernateServicesMappings(bool registerOperationalServices, bool registerConfigurationServices)
-        {
-            var config = new AutomappingConfiguration(registerOperationalServices, registerConfigurationServices);
-
-            var map = AutoMap.AssemblyOf<BaseEntity>(config)
-                .Conventions.Add(DefaultCascade.All())
-                .UseOverridesFromAssemblyOf<BaseEntity>()
-                .IgnoreBase(typeof(BaseEntity<>));
-
-            return map;
-        }
-
-        public static void ConfigureNhibernateServicesMappings(
-            this MappingConfiguration m, 
-            bool registerOperationalServices, 
-            bool registerConfigurationServices, 
+        public static AutoPersistenceModel GetNhibernateServicesMappings(
+            bool registerOperationalServices,
+            bool registerConfigurationServices,
             IEnumerable<IConvention> conventions = null)
         {
             var config = new AutomappingConfiguration(registerOperationalServices, registerConfigurationServices);
@@ -65,8 +52,16 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
                 map.Conventions.Add(conventions.ToArray());
             }
 
-            m.AutoMappings.Add(map);
+            return map;
         }
+
+        public static void ConfigureNhibernateServicesMappings(
+            this MappingConfiguration m, 
+            bool registerOperationalServices, 
+            bool registerConfigurationServices, 
+            IEnumerable<IConvention> conventions = null)
+            => m.AutoMappings.Add(
+                GetNhibernateServicesMappings(registerOperationalServices, registerConfigurationServices, conventions));
 
         public static IMapper CreateMapper(params Profile[] profileConfigs)
             => new MapperConfiguration(cfg => cfg.AddProfiles(profileConfigs))
