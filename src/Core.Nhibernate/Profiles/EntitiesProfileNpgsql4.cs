@@ -1,11 +1,10 @@
 ﻿using System;
 
-// ReSharper disable once CheckNamespace
-namespace IdentityServer3.Core.Models // TODO - relocate this namespace
+namespace IdentityServer3.Contrib.Nhibernate.Profiles
 {
     public class EntitiesProfileNpgSql4 : EntitiesProfile
     {
-        public EntitiesProfileNpgSql4() : base()
+        public EntitiesProfileNpgSql4()
         {
             CreateMap<DateTimeOffset, DateTime>().ConstructUsing(dto => dto.DateTime);
         }

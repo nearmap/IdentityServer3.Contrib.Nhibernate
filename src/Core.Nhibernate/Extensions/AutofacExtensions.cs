@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Services;
 
@@ -15,7 +14,9 @@ namespace Autofac
         /// <returns>A <see cref="ContainerBuilder"/></returns>
         public static ContainerBuilder RegisterAutoMapper(this ContainerBuilder builder, params Profile[] profileConfigs)
         {
-            builder.RegisterInstance(MappingHelper.CreateMapper(profileConfigs));
+            builder.RegisterInstance(new MapperConfiguration(
+                cfg => cfg.AddProfiles(profileConfigs))
+                .CreateMapper());
             return builder;
         }
 

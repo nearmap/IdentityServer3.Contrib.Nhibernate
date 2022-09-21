@@ -22,14 +22,13 @@
 *SOFTWARE.
 */
 
-using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
-using IdentityServer3.Core.Models;
+using Core.Nhibernate.IntegrationTests.Stores;
 
-namespace Core.Nhibernate.IntegrationTests.Stores
+namespace Core.Nhibernate.IntegrationTests.Npgsql6.Stores
 {
     public class ClientStoreTestsNpgsql6 : ClientStoreTests
     {
-        public ClientStoreTestsNpgsql6() : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql6()))
+        public ClientStoreTestsNpgsql6() : base(Config.Mapper)
         {
         }
     }

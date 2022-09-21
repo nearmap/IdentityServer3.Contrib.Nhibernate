@@ -24,14 +24,13 @@
 
 
 
-using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
-using IdentityServer3.Core.Models;
+using Core.Nhibernate.IntegrationTests.Npgsql4;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class ClientStoreTestsNpgsql4 : ClientStoreTests
     {
-        public ClientStoreTestsNpgsql4() : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql4()))
+        public ClientStoreTestsNpgsql4() : base(Config.Mapper)
         {
         }
     }

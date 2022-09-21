@@ -3,7 +3,6 @@ using Microsoft.Owin;
 using Owin;
 using Serilog;
 using Serilog.Extensions.Logging;
-using System.Threading.Tasks;
 using WebHost.Config;
 
 [assembly: OwinStartup(typeof(WebHost.Startup))]
@@ -12,7 +11,7 @@ namespace WebHost
 {
     internal class Startup
     {
-        public async Task Configuration(IAppBuilder appBuilder)
+        public void Configuration(IAppBuilder appBuilder)
         {
             var providers = new LoggerProviderCollection();
 
@@ -32,7 +31,7 @@ namespace WebHost
                 {
                     SiteName = "IdentityServer3 (Nhibernate)",
                     SigningCertificate = Certificate.Get(),
-                    Factory = await Factory.ConfigureAsync(logger)//.GetAwaiter().GetResult()
+                    Factory = await Factory.ConfigureAsync(logger)
                 };
 
                 core.UseIdentityServer(options);

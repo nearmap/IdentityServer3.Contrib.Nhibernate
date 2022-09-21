@@ -22,14 +22,13 @@
 *SOFTWARE.
 */
 
-using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
-using IdentityServer3.Core.Models;
+using Core.Nhibernate.IntegrationTests.Npgsql4;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public class RefreshTokenStoreTestsNpgsql4 : RefreshTokenStoreTests
     {
-        public RefreshTokenStoreTestsNpgsql4() : base(MappingHelper.CreateMapper(new EntitiesProfileNpgSql4()))
+        public RefreshTokenStoreTestsNpgsql4() : base(Config.Mapper)
         {
         }
     }

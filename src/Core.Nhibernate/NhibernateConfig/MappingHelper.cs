@@ -22,7 +22,6 @@
 */
 
 
-using AutoMapper;
 using FluentNHibernate.Automapping;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Conventions;
@@ -62,9 +61,5 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
             IEnumerable<IConvention> conventions = null)
             => m.AutoMappings.Add(
                 GetNhibernateServicesMappings(registerOperationalServices, registerConfigurationServices, conventions));
-
-        public static IMapper CreateMapper(params Profile[] profileConfigs)
-            => new MapperConfiguration(cfg => cfg.AddProfiles(profileConfigs))
-                .CreateMapper();
     }
 }

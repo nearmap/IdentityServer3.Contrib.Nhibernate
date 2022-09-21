@@ -26,7 +26,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -71,22 +70,15 @@ namespace Core.Nhibernate.IntegrationTests.Stores
 
         private ISessionFactory GetNHibernateSessionFactory()
         {
-            var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
-
             var sessionFactory = Fluently.Configure()
-                .Database(PostgreSQLConfiguration.PostgresSQL93.ConnectionString(connString.ToString())
-                    //.Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
-                    .ShowSql()
-                    .FormatSql()
-                    .AdoNetBatchSize(20)
-                )
+                .Database(Config.DbConfig)
                 .Mappings(
                     m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true))
                 )
                 .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
-                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg, new PostgresSQL93Dialect());
+                    Config.ConfigAction(cfg);
                     BuildSchema(cfg);
                 })
                 .BuildSessionFactory();

@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using AutoMapper;
-using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 using ContribModels = IdentityServer3.Contrib.Nhibernate.Models;
 using CoreModels = IdentityServer3.Core.Models;
 
-// ReSharper disable once CheckNamespace
-namespace IdentityServer3.Core.Models // TODO - relocate this namespace
+namespace IdentityServer3.Contrib.Nhibernate.Profiles
 {
     public class EntitiesProfile : Profile
     {

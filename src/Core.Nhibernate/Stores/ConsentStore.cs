@@ -48,8 +48,6 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 var consent = await session.Query<Consent>()
                     .SingleOrDefaultAsync(c => c.Subject == subject && c.ClientId == client);
 
-                _ = consent?.Scopes; // Force access of the Scopes link within the transaction.
-
                 return consent;
             });
 
