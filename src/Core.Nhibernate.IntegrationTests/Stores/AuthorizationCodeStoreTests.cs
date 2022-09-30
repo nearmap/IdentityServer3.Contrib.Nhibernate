@@ -97,8 +97,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 code.CodeChallenge,
                 code.CodeChallengeMethod,
                 code.SubjectId,
-                code.ClientId,
-                Scopes = code.Scopes.Select(x => x)
+                code.ClientId
             };
 
             return JsonConvert.SerializeObject(obj);

@@ -1,16 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Models
 {
     internal class RefreshToken
     {
-        /// <summary>
-        /// Gets or sets the ClientId
-        /// </summary>
-        public string ClientId => AccessToken.ClientId;
-
         /// <summary>
         /// Gets or sets the creation time.
         /// </summary>
@@ -35,15 +28,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Models
         /// Gets or sets the version number.
         /// </summary>
         public int Version { get; set; }
-
-        /// <summary>
-        /// Gets the subject identifier.
-        /// </summary>
-        public string SubjectId => AccessToken.SubjectId;
-
-        /// <summary>
-        /// Gets the scopes
-        /// </summary>
-        public IEnumerable<string> Scopes => AccessToken.Scopes.Select(x => x.Name);
     }
 }

@@ -84,8 +84,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Profiles
 
             CreateMap<CoreModels.RefreshToken, Entities.Token>();
 
-            CreateMap<CoreModels.AuthorizationCode, ContribModels.AuthorizationCode>()
-                .ForMember(dest => dest.Scopes, opt => opt.Ignore());
+            CreateMap<CoreModels.AuthorizationCode, ContribModels.AuthorizationCode>();
 
             CreateMap<Claim, ContribModels.ClaimLite>();
 
@@ -97,8 +96,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Profiles
 
             CreateMap<CoreModels.Scope, ContribModels.ScopeLite>();
 
-            CreateMap<CoreModels.RefreshToken, ContribModels.RefreshToken>()
-                .ForMember(dest => dest.Scopes, opt => opt.Ignore());
+            CreateMap<CoreModels.RefreshToken, ContribModels.RefreshToken>();
 
             CreateMap<CoreModels.Token, ContribModels.Token>();
 
@@ -114,15 +112,13 @@ namespace IdentityServer3.Contrib.Nhibernate.Profiles
                     opt => opt.MapFrom(src => GetClaims(src.Claims)));
 
             CreateMap<ContribModels.RefreshToken, CoreModels.RefreshToken>()
-                .ForMember(dest => dest.Scopes, opt => opt.Ignore())
                 .ForMember(dest => dest.Subject,
                     opt => opt.MapFrom(src => GetClaimsPrincipal(src.Subject)));
 
             CreateMap<ContribModels.Token, CoreModels.Token>()
                 .ForMember(dest => dest.Client, opt => opt.Ignore())
                 .ForMember(dest => dest.Claims,
-                    opt => opt.MapFrom(src => GetClaims(src.Claims)))
-                .ForMember(dest => dest.Scopes, opt => opt.Ignore());
+                    opt => opt.MapFrom(src => GetClaims(src.Claims)));
         }
 
         private IEnumerable<Claim> GetClaims(IEnumerable<ContribModels.ClaimLite> claims)

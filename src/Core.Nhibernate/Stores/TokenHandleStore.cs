@@ -74,7 +74,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             if (tokenModel == null) { return null; }
 
             var clientEntity = await session.Query<ClientEntity>()
-                .SingleOrDefaultAsync(x => x.ClientId == nhibTokenModel.ClientId);
+                .SingleOrDefaultAsync(x => x.ClientId == nhibTokenModel.Client.ClientId);
 
             tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
 

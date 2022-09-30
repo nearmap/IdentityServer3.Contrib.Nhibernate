@@ -64,11 +64,7 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                     code.ClientId
                 },
                 Claims = code.Claims.Select(x => new { x.Type, x.Value }),
-                code.Version,
-                code.SubjectId,
-                code.ClientId,
-                Scopes = code.Scopes.Select(x => x),
-
+                code.Version
             };
 
             return JsonConvert.SerializeObject(obj);

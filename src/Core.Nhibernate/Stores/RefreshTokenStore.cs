@@ -97,7 +97,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             if (refreshToken == null) { return null; }
 
-            refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(nhibRefreshToken.ClientId);
+            refreshToken.AccessToken.Client = await ClientStore
+                .FindClientByIdAsync(nhibRefreshToken.AccessToken.Client.ClientId);
 
             var claims = nhibRefreshToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
             refreshToken.Subject = new ClaimsPrincipal(
