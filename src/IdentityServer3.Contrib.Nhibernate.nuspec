@@ -4,7 +4,7 @@
     <id>IdentityServer3.Contrib.Nhibernate</id>
     <version>0.0.0</version>
     <title>IdentityServer3.Contrib.Nhibernate</title>
-    <authors>Ricardo Santos, Jason F. Bridgman and contributors</authors>
+    <authors>Ricardo Santos, Nearmap and contributors</authors>
 	<license type="expression">MIT</license>
 	<projectUrl>https://github.com/nearmap/IdentityServer3.Contrib.Nhibernate</projectUrl>
 	<requireLicenseAcceptance>false</requireLicenseAcceptance>

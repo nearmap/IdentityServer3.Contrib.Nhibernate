@@ -1,7 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
-*Copyright (c) 2022 Jason F. Bridgman
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -259,15 +259,11 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var tokens = (await sut.GetAllAsync(subjectId1)).ToList();
 
             //Assert
-            tokens.Should().HaveCount(2)
-                .And.AllBeOfType<RefreshToken>()
-                .And.BeEquivalentTo(
-                new[] { refreshToken1, refreshToken2 },
-                options => options
-                    .IgnoringCyclicReferences()
-                    .Using<DateTimeOffset>(
-                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
-                    .WhenTypeIs<DateTimeOffset>());
+            tokens.Should().BeEquivalentTo(new[] { refreshToken1, refreshToken2 }, options => options
+                .IgnoringCyclicReferences()
+                .Using<DateTimeOffset>(
+                    ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
             await ExecuteInTransactionAsync(async session =>

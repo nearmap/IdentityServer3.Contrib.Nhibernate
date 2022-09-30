@@ -60,13 +60,7 @@ namespace Core.Nhibernate.Tests
     internal static class TestExtensions
     {
         public static AndConstraint<IContainer> ShouldResolve<TInterface, TClass>(this ContainerBuilder builder)
-        {
-            var container = builder.Build();
-
-            container.Resolve<TInterface>().Should().BeOfType<TClass>().And.NotBeNull();
-
-            return new AndConstraint<IContainer>(container);
-        }
+            => builder.Build().ShouldResolve<TInterface, TClass>();
 
         public static AndConstraint<IContainer> ShouldResolve<TInterface, TClass>(this IContainer container)
         {

@@ -55,19 +55,26 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         private async Task<CoreTokenModel> GetInnerAsync(ISession session, string key)
         {
             var token = await session
-                    .Query<EntityTokenModel>()
-                    .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
+                .Query<EntityTokenModel>()
+                .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow);
 
             if (token == null) { return null; }
 
-            var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+            var tokenModel = await GetCoreTokenFromEntityToken(session, token);
 
-            var tokenModel = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<CoreTokenModel>(tModel);
+            return tokenModel;
+        }
+
+        private async Task<CoreTokenModel> GetCoreTokenFromEntityToken(ISession session, EntityTokenModel token)
+        {
+            var nhibTokenModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+
+            var tokenModel = _mapper.Map<CoreTokenModel>(nhibTokenModel);
 
             if (tokenModel == null) { return null; }
 
             var clientEntity = await session.Query<ClientEntity>()
-                .SingleOrDefaultAsync(x => x.ClientId == tModel.ClientId);
+                .SingleOrDefaultAsync(x => x.ClientId == nhibTokenModel.ClientId);
 
             tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
 
@@ -80,7 +87,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         private async Task<IEnumerable<ITokenMetadata>> GetAllInnerAsync(ISession session, string subjectId)
         {
             var tokens = await session.Query<EntityTokenModel>()
-                .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
+                .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow)
                 .ToListAsync();
 
             if (!tokens.Any())
@@ -92,19 +99,9 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             foreach (var token in tokens)
             {
-                var tModel = ConvertFromJson<NHibTokenModel>(token.JsonCode);
+                var tokenModel = await GetCoreTokenFromEntityToken(session, token);
 
-                if (tModel == null)
-                {
-                    continue;
-                }
-
-                var tokenModel = _mapper.Map<CoreTokenModel>(tModel);
-
-                var clientEntity = await session.Query<ClientEntity>()
-                    .SingleOrDefaultAsync(x => x.ClientId == tModel.ClientId);
-
-                tokenModel.Client = clientEntity == null ? null : _mapper.Map<CoreClientModel>(clientEntity);
+                if (tokenModel is null) { continue; }
 
                 tokenList.Add(tokenModel);
             }

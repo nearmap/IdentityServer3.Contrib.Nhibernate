@@ -5,7 +5,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Postgres
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Minor Code Smell", "S101:Types should be named in PascalCase", 
-        Justification = "Matching Heirarcy")]
+        Justification = "Matching Hierarchy")]
     public class PostgreSQLConfiguration :
         PersistenceConfiguration<PostgreSQLConfiguration, PostgreSQLConnectionStringBuilder>
     {

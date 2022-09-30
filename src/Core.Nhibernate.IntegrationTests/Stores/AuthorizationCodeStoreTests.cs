@@ -1,7 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
-*Copyright (c) 2022 Jason F. Bridgman
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -118,10 +118,12 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                 var token = await session.Query<Token>()
                     .SingleOrDefaultAsync(t => t.TokenType == TokenType.AuthorizationCode && t.Key == testKey);
 
-                token.Should().NotBeNull();
-                token.TokenType.Should().Be(TokenType.AuthorizationCode);
-                token.Key.Should().Be(testKey);
-                token.ClientId.Should().Be(testCode.ClientId);
+                token.Should().BeEquivalentTo(new
+                {
+                    TokenType = TokenType.AuthorizationCode,
+                    Key = testKey,
+                    testCode.ClientId
+                });
 
                 //CleanUp
                 await session.DeleteAsync(token);

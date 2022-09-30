@@ -1,7 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
-*Copyright (c) 2022 Jason F. Bridgman
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ using IdentityServer3.Core.Services;
 using NHibernate;
 using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
-using RefToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
+using NHibRefreshToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
@@ -55,28 +55,11 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         {
             var token = await session
                 .Query<Token>()
-                .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
+                .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow);
 
-            if (token == null)
-            {
-                return null;
-            }
+            if (token == null) { return null; }
 
-            var refToken = ConvertFromJson<RefToken>(token.JsonCode);
-
-            var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
-
-            if (refreshToken == null)
-            {
-                return null;
-            }
-
-            refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(refToken.ClientId);
-
-            var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
-            refreshToken.Subject = new ClaimsPrincipal(
-                new ClaimsIdentity(
-                    claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+            var refreshToken = await GetRefreshTokenFromToken(token);
 
             return refreshToken;
         }
@@ -87,8 +70,8 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
         private async Task<IEnumerable<ITokenMetadata>> GetAllInnerAsync(ISession session, string subjectId)
         {
             var tokens = await session.Query<Token>()
-                    .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                    .ToListAsync();
+                .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow)
+                .ToListAsync();
 
             if (!tokens.Any()) return new List<ITokenMetadata>();
 
@@ -96,26 +79,32 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 
             foreach (var token in tokens)
             {
-                var refToken = ConvertFromJson<RefToken>(token.JsonCode);
+                var refreshToken = await GetRefreshTokenFromToken(token);
 
-                var refreshToken = token.Expiry < DateTime.UtcNow ? null : _mapper.Map<RefreshToken>(refToken);
-
-                if (refreshToken == null)
-                {
-                    continue;
-                }
-
-                refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(refToken.ClientId);
-
-                var claims = refToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
-                refreshToken.Subject = new ClaimsPrincipal(
-                    new ClaimsIdentity(
-                        claims, refToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+                if (refreshToken is null) { continue; }
 
                 tokenList.Add(refreshToken);
             }
 
             return tokenList;
+        }
+
+        private async Task<RefreshToken> GetRefreshTokenFromToken(Token token)
+        {
+            var nhibRefreshToken = ConvertFromJson<NHibRefreshToken>(token.JsonCode);
+
+            var refreshToken = _mapper.Map<RefreshToken>(nhibRefreshToken);
+
+            if (refreshToken == null) { return null; }
+
+            refreshToken.AccessToken.Client = await ClientStore.FindClientByIdAsync(nhibRefreshToken.ClientId);
+
+            var claims = nhibRefreshToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+            refreshToken.Subject = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    claims, nhibRefreshToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+            return refreshToken;
         }
 
         public override async Task StoreAsync(string key, RefreshToken value)
@@ -138,7 +127,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 };
             }
 
-            token.JsonCode = ConvertToJson<RefToken>(value);
+            token.JsonCode = ConvertToJson<NHibRefreshToken>(value);
             token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
 
             await session.SaveOrUpdateAsync(token);
