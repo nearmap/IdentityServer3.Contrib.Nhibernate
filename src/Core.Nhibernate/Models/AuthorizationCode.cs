@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.Models
 {
@@ -73,10 +72,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Models
         /// Gets or sets the client identifier.
         /// </summary>
         public string ClientId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the scopes.
-        /// </summary>
-        public IEnumerable<string> Scopes => RequestedScopes.Select(x => x.Name);
     }
 }

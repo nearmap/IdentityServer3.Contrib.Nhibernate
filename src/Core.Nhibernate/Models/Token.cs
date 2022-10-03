@@ -13,8 +13,5 @@ namespace IdentityServer3.Contrib.Nhibernate.Models
         public ClientLite Client { get; set; }
         public IEnumerable<ClaimLite> Claims { get; set; }
         public int Version { get; set; }
-        public string SubjectId { get; set; }
-        public string ClientId { get; set; }
-        public IEnumerable<ScopeLite> Scopes { get; set; }
     }
 }

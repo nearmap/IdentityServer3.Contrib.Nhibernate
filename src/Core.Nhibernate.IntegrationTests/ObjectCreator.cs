@@ -98,7 +98,10 @@ namespace Core.Nhibernate.IntegrationTests
                 .Without(t => t.Client)
                 .With(t => t.Claims, new List<Claim>()
                 {
-                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString())
+                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>())
                 });
 
             var token = tokenBuilder.Create();

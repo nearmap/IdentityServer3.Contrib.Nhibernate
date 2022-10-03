@@ -77,7 +77,6 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         {
             var obj = new
             {
-                code.ClientId,
                 CreationTime = code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
                 code.LifeTime,
                 AccessToken = new
@@ -92,19 +91,14 @@ namespace Core.Nhibernate.IntegrationTests.Stores
                         code.ClientId
                     },
                     Claims = code.AccessToken.Claims.Select(x => new { x.Type, x.Value }),
-                    code.AccessToken.Version,
-                    code.SubjectId,
-                    code.ClientId,
-                    Scopes = code.AccessToken.Scopes.Select(x => x),
+                    code.AccessToken.Version
                 },
                 Subject = new
                 {
                     code.Subject.Identity.AuthenticationType,
                     Claims = code.Subject.Claims.Select(x => new { x.Type, x.Value }),
                 },
-                code.Version,
-                code.SubjectId,
-                Scopes = code.Scopes.Select(x => x)
+                code.Version
             };
 
             return JsonConvert.SerializeObject(obj);
