@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,118 +25,78 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
-using IdentityServer3.Contrib.Nhibernate.Serialization;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using Newtonsoft.Json;
 using NHibernate;
-using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
-    public abstract class BaseTokenStore<T> : NhibernateStore where T : class
+    public abstract class BaseTokenStore<T> : NhibernateStore 
+        where T : class
     {
         protected readonly TokenType TokenType;
         protected readonly IScopeStore ScopeStore;
         protected readonly IClientStore ClientStore;
 
-        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session)
+        protected BaseTokenStore(ISession session, TokenType tokenType, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, mapper)
         {
-            if (scopeStore == null) throw new ArgumentNullException(nameof(scopeStore));
-            if (clientStore == null) throw new ArgumentNullException(nameof(clientStore));
-
+            ScopeStore = scopeStore ?? throw new ArgumentNullException(nameof(scopeStore));
+            ClientStore = clientStore ?? throw new ArgumentNullException(nameof(clientStore));
             TokenType = tokenType;
-            ScopeStore = scopeStore;
-            ClientStore = clientStore;
         }
 
-        JsonSerializerSettings GetJsonSerializerSettings()
-        {
-            var settings = new JsonSerializerSettings();
-            settings.Converters.Add(new ClaimConverter());
-            settings.Converters.Add(new ClaimsPrincipalConverter());
-            settings.Converters.Add(new ClientConverter(ClientStore));
-            settings.Converters.Add(new ScopeConverter(ScopeStore));
-            return settings;
-        }
-
-        protected string ConvertToJson(T value)
-        {
-            return JsonConvert.SerializeObject(value, GetJsonSerializerSettings());
-        }
-
-        protected T ConvertFromJson(string json)
-        {
-            return JsonConvert.DeserializeObject<T>(json, GetJsonSerializerSettings());
-        }
-
-        public async Task<T> GetAsync(string key)
-        {
-            var toReturn = ExecuteInTransaction(session =>
+        private JsonSerializerSettings SerializerSettings
+            =>  new JsonSerializerSettings()
             {
-                var token = session
-                    .Query<Token>()
-                    .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            };
 
-                return (token == null || token.Expiry < DateTimeOffset.UtcNow)
-                    ? null
-                    : ConvertFromJson(token.JsonCode);
-            });
-            return await Task.FromResult(toReturn);
+        protected string ConvertToJson<TEntity>(T value)
+        {
+            return JsonConvert.SerializeObject(_mapper.Map<TEntity>(value), SerializerSettings);
         }
+
+        protected TEntity ConvertFromJson<TEntity>(string json)
+        {
+            return JsonConvert.DeserializeObject<TEntity>(json, SerializerSettings);
+        }
+
+        public abstract Task<T> GetAsync(string key);
 
         public async Task RemoveAsync(string key)
         {
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.CreateQuery($"DELETE {nameof(Token)} t " +
+                await session.CreateQuery($"DELETE {nameof(Token)} t " +
                                     $"WHERE t.{nameof(Token.Key)} = :key " +
                                     $"and t.{nameof(Token.TokenType)} = :tokenType")
                     .SetParameter("key", key)
                     .SetParameter("tokenType", TokenType)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             });
-
-            await TaskExtensions.CompletedTask;
         }
 
-        public async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
-        {
-            var toReturn = ExecuteInTransaction(session =>
-              {
-                  var tokens = session.Query<Token>()
-                      .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType)
-                      .ToList();
-
-                  if (!tokens.Any()) return new List<ITokenMetadata>();
-
-                  var results = tokens.Select(x => ConvertFromJson(x.JsonCode)).ToArray();
-                  return results.Cast<ITokenMetadata>();
-              });
-
-            return await Task.FromResult(toReturn);
-        }
+        public abstract Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId);
 
         public async Task RevokeAsync(string subjectId, string clientId)
         {
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.CreateQuery($"DELETE {nameof(Token)} t " +
+                await session.CreateQuery($"DELETE {nameof(Token)} t " +
                                     $"WHERE t.{nameof(Token.SubjectId)} = :subject " +
                                     $"and t.{nameof(Token.ClientId)} = :clientId " +
                                     $"and t.{nameof(Token.TokenType)} = :tokenType")
                     .SetParameter("subject", subjectId)
                     .SetParameter("clientId", clientId)
                     .SetParameter("tokenType", TokenType)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             });
-
-            await TaskExtensions.CompletedTask;
         }
 
         public abstract Task StoreAsync(string key, T value);

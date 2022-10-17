@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,40 +25,46 @@
 
 
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Models;
-using NHibernate;
-using NHibernate.Linq;
+using IdentityServer3.Core.Services;
 using Xunit;
+
+using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ScopeStoreTests : BaseStoreTests
+    public abstract class ScopeStoreTests : BaseStoreTests
     {
-        public ScopeStoreTests()
+        private readonly IScopeStore sut;
+        private readonly Scope testScope1 = ObjectCreator.GetScope();
+        private readonly Scope testScope2 = ObjectCreator.GetScope();
+        private readonly Scope testScope3 = ObjectCreator.GetScope();
+        private readonly Entities.Scope testScope1Entity;
+        private readonly Entities.Scope testScope2Entity;
+        private readonly Entities.Scope testScope3Entity;
+
+        protected ScopeStoreTests(IMapper mapper) : base(mapper)
         {
+            sut = new ScopeStore(Session, mapper);
+            testScope1Entity = Mapper.Map<Scope, Entities.Scope>(testScope1);
+            testScope2Entity = Mapper.Map<Scope, Entities.Scope>(testScope2);
+            testScope3Entity = Mapper.Map<Scope, Entities.Scope>(testScope3);
         }
 
         [Fact]
         public async Task FindScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession);
-            var testScope1 = ObjectCreator.GetScope();
-            var testScope2 = ObjectCreator.GetScope();
-            var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity();
-            var testScope2Entity = testScope2.ToEntity();
-            var testScope3Entity = testScope3.ToEntity();
-
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testScope1Entity);
-                session.Save(testScope2Entity);
-                session.Save(testScope3Entity);
+                await session.SaveAsync(testScope1Entity);
+                await session.SaveAsync(testScope2Entity);
+                await session.SaveAsync(testScope3Entity);
             });
 
             //Act
@@ -71,42 +78,29 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var scopeNames = result.Select(s => s.Name).ToList();
 
             //Assert
-            Assert.Contains(testScope1.Name, scopeNames);
-            Assert.Contains(testScope2.Name, scopeNames);
-            Assert.DoesNotContain(testScope3.Name, scopeNames);
+            scopeNames.Should().BeEquivalentTo(new[] { testScope1.Name, testScope2.Name });
 
-            //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(testScope1Entity);
-                session.Delete(testScope2Entity);
-                session.Delete(testScope3Entity);
-
+                await session.DeleteAsync(testScope1Entity);
+                await session.DeleteAsync(testScope2Entity);
+                await session.DeleteAsync(testScope3Entity);
             });
-
         }
 
         [Fact]
         public async Task GetScopesAsync()
         {
             //Arrange
-            var sut = new ScopeStore(NhibernateSession);
-            var testScope1 = ObjectCreator.GetScope();
-            var testScope2 = ObjectCreator.GetScope();
-            var testScope3 = ObjectCreator.GetScope();
-            var testScope1Entity = testScope1.ToEntity();
-            var testScope2Entity = testScope2.ToEntity();
-            var testScope3Entity = testScope3.ToEntity();
             testScope1Entity.ShowInDiscoveryDocument = true;
             testScope2Entity.ShowInDiscoveryDocument = true;
             testScope3Entity.ShowInDiscoveryDocument = false;
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testScope1Entity);
-                session.Save(testScope2Entity);
-                session.Save(testScope3Entity);
-
+                await session.SaveAsync(testScope1Entity);
+                await session.SaveAsync(testScope2Entity);
+                await session.SaveAsync(testScope3Entity);
             });
 
             //Act
@@ -116,19 +110,17 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             var scopeNames = result.Select(s => s.Name).ToList();
 
             //Assert
-            Assert.Contains(testScope1.Name, scopeNames);
-            Assert.Contains(testScope2.Name, scopeNames);
-            Assert.DoesNotContain(testScope3.Name, scopeNames);
+            scopeNames
+                .Should().Contain(testScope1.Name)
+                .And.Subject
+                .Should().Contain(testScope2.Name);
 
-            //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(testScope1Entity);
-                session.Delete(testScope2Entity);
-                session.Delete(testScope3Entity);
+                await session.DeleteAsync(testScope1Entity);
+                await session.DeleteAsync(testScope2Entity);
+                await session.DeleteAsync(testScope3Entity);
             });
         }
-
-
     }
 }

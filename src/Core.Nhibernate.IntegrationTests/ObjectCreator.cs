@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -28,34 +29,40 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
-using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.AutoMoq;
+using AutoFixture;
+using AutoFixture.AutoMoq;
 using Consent = IdentityServer3.Contrib.Nhibernate.Entities.Consent;
+using System.Linq;
 
 namespace Core.Nhibernate.IntegrationTests
 {
-    public class ObjectCreator
+    public static class ObjectCreator
     {
         private static readonly IFixture AFixture = new Fixture()
             .Customize(new AutoMoqCustomization());
 
-        public static AuthorizationCode GetAuthorizationCode(string subjectId = null, string clientId = null)
+        public static AuthorizationCode GetAuthorizationCode(ClaimsPrincipal subject, Client client, IEnumerable<Scope> scopes)
         {
             var codeBuilder = AFixture.Build<AuthorizationCode>()
                 .Without(ac => ac.Client)
                 .Without(ac => ac.Subject)
+                .Without(ac => ac.RequestedScopes)
                 .Without(ac => ac.CodeChallengeMethod);
 
             var code = codeBuilder.Create();
 
-            code.Client = GetClient(clientId);
-            code.Subject = GetSubject(subjectId);
+            code.Client = client;
+            code.Subject = subject;
+            code.RequestedScopes = scopes;
             code.CodeChallengeMethod = Constants.CodeChallengeMethods.Plain;
 
             return code;
         }
 
         public static Token GetTokenHandle(string subjectId = null, string clientId = null)
+            => GetTokenHandle(GetClient(clientId), subjectId);
+
+        public static Token GetTokenHandle(Client client, string subjectId = null)
         {
             var tokenBuilder = AFixture.Build<Token>()
                 .Without(t => t.Client)
@@ -66,17 +73,17 @@ namespace Core.Nhibernate.IntegrationTests
 
             var token = tokenBuilder.Create();
 
-            token.Client = GetClient(clientId);
+            token.Client = client;
 
             return token;
         }
 
-        public static RefreshToken GetRefreshToken(string subjectId = null, string clientId = null)
+        public static RefreshToken GetRefreshToken(Client client, string subjectId = null)
         {
             var tokenBuilder = AFixture.Build<RefreshToken>()
                 .Without(rt => rt.Subject)
-                .With(rt => rt.CreationTime, DateTimeOffset.UtcNow)
-                .With(rt => rt.AccessToken, GetAccessToken(subjectId, clientId));
+                .With(rt => rt.CreationTime, DateTime.UtcNow)
+                .With(rt => rt.AccessToken, GetAccessToken(subjectId, client));
 
             var token = tokenBuilder.Create();
 
@@ -85,27 +92,33 @@ namespace Core.Nhibernate.IntegrationTests
             return token;
         }
 
-        private static Token GetAccessToken(string subjectId, string clientId)
+        private static Token GetAccessToken(string subjectId, Client client)
         {
             var tokenBuilder = AFixture.Build<Token>()
-               .Without(t => t.Client)
-               .With(t => t.Claims, new List<Claim>()
-               {
-                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString())
-               });
+                .Without(t => t.Client)
+                .With(t => t.Claims, new List<Claim>()
+                {
+                    new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>()),
+                    new Claim(Constants.ClaimTypes.Scope, AFixture.Create<string>())
+                });
 
             var token = tokenBuilder.Create();
 
-            token.Client = GetClient(clientId);
+            token.Client = client;
 
             return token;
         }
 
-        private static ClaimsPrincipal GetSubject(string subjectId = null)
+        public static ClaimsPrincipal GetSubject(string subjectId = null)
         {
-            var claimsIdentity = new ClaimsIdentity();
+            var claimsIdentity = new ClaimsIdentity(
+                authenticationType: "test",
+                nameType: Constants.ClaimTypes.Name, 
+                roleType: Constants.ClaimTypes.Role);
             claimsIdentity.AddClaim(new Claim(Constants.ClaimTypes.Subject, subjectId ?? Guid.NewGuid().ToString()));
-
+            
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
             return claimsPrincipal;
@@ -125,48 +138,29 @@ namespace Core.Nhibernate.IntegrationTests
         }
 
         public static IEnumerable<Claim> GetClaims(int nClaimsToGet)
-        {
-            var claims = new List<Claim>();
-
-            for (var i = 0; i < nClaimsToGet; i++)
-            {
-                claims.Add(GetClaim());
-            }
-
-            return claims;
-        }
+            => Enumerable.Range(0, nClaimsToGet).Select(x => GetClaim()).ToList();
 
         public static Claim GetClaim()
-        {
-            var claim = new Claim(AFixture.Create<string>(), AFixture.Create<string>());
-
-            return claim;
-        }
-
+            => new Claim(AFixture.Create<string>(), AFixture.Create<string>());
 
         public static IEnumerable<Scope> GetScopes(int nScopesToGet)
-        {
-            var scopes = AFixture.CreateMany<Scope>(nScopesToGet);
+            => AFixture.CreateMany<Scope>(nScopesToGet);
 
-            return scopes;
-        }
-
-        public static Scope GetScope()
-        {
-            var scope = AFixture.Create<Scope>();
-
-            return scope;
-        }
+        public static Scope GetScope() => AFixture.Create<Scope>();
 
         public static Consent GetConsent(string clientId = null, string subject = null)
         {
             var consent = AFixture.Create<Consent>();
 
             if (clientId != null)
+            {
                 consent.ClientId = clientId;
-
+            }
+                
             if (subject != null)
+            {
                 consent.Subject = subject;
+            }
 
             return consent;
         }

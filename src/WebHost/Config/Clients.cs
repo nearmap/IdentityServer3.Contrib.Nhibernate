@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
 
@@ -27,26 +23,26 @@ namespace WebHost.Config
                     Flow = Flows.ClientCredentials,
 
                     ClientSecrets = new List<Secret>
+                    {
+                        new Secret("secret".Sha256()),
+                        new Secret
                         {
-                            new Secret("secret".Sha256()),
-                            new Secret
-                            {
-                                Value = "61B754C541BBCFC6A45A9E9EC5E47D8702B78C29",
-                                Type = Constants.SecretTypes.X509CertificateThumbprint,
-                                Description = "Client Certificate"
-                            },
+                            Value = "61B754C541BBCFC6A45A9E9EC5E47D8702B78C29",
+                            Type = Constants.SecretTypes.X509CertificateThumbprint,
+                            Description = "Client Certificate"
                         },
+                    },
 
                     AllowedScopes = new List<string>
-                        {
-                            "read",
-                            "write"
-                        },
+                    {
+                        "read",
+                        "write"
+                    },
 
                     Claims = new List<Claim>
-                        {
-                            new Claim("location", "datacenter")
-                        }
+                    {
+                        new Claim("location", "datacenter")
+                    }
                 },
 
                 /////////////////////////////////////////////////////////////

@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,47 +25,143 @@
 
 
 using System;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using IdentityServer3.Contrib.Nhibernate.Entities;
+using AutoMapper;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Enums;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using NHibernate;
+using IdentityServer3.Core.Models;
+using IdentityServer3.Core.Services;
+using Newtonsoft.Json;
 using NHibernate.Linq;
 using Xunit;
 
+using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using RefreshTokenEntity = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
+
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class RefreshTokenStoreTests : BaseStoreTests
+    public abstract class RefreshTokenStoreTests : BaseStoreTests
     {
-        public RefreshTokenStoreTests()
+        private readonly IRefreshTokenStore sut;
+
+        private readonly string testKey = Guid.NewGuid().ToString();
+        private RefreshToken testCode;
+        private Token tokenHandle;
+
+        protected RefreshTokenStoreTests(IMapper mapper) : base(mapper)
         {
+            sut = new RefreshTokenStore(Session, ScopeStore, ClientStore, mapper);
+        }
+
+        private async Task SetupTestData()
+        {
+            var client = await SetupClientAsync();
+            testCode = ObjectCreator.GetRefreshToken(client);
+            tokenHandle = GetToken(testKey, testCode);
+        }
+
+        private Token GetToken(string key, RefreshToken token)
+            => new Token
+            {
+                Key = key,
+                SubjectId = token.SubjectId,
+                ClientId = token.ClientId,
+                JsonCode = ConvertToJson<RefreshToken, RefreshTokenEntity>(token),
+                Expiry = token.CreationTime.UtcDateTime.AddSeconds(token.LifeTime),
+                TokenType = TokenType.RefreshToken
+            };
+
+        private string GetJsonCodeFromRefreshToken(RefreshToken code)
+        {
+            var obj = new
+            {
+                CreationTime = code.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
+                code.LifeTime,
+                AccessToken = new
+                {
+                    code.AccessToken.Audience,
+                    code.AccessToken.Issuer,
+                    CreationTime = code.AccessToken.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.FFFFFFFzzz"),
+                    code.AccessToken.Lifetime,
+                    code.AccessToken.Type,
+                    Client = new
+                    {
+                        code.ClientId
+                    },
+                    Claims = code.AccessToken.Claims.Select(x => new { x.Type, x.Value }),
+                    code.AccessToken.Version
+                },
+                Subject = new
+                {
+                    code.Subject.Identity.AuthenticationType,
+                    Claims = code.Subject.Claims.Select(x => new { x.Type, x.Value }),
+                },
+                code.Version
+            };
+
+            return JsonConvert.SerializeObject(obj);
         }
 
         [Fact]
         public async Task StoreAsync()
         {
-            //Arrange
-            var sut = new RefreshTokenStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetRefreshToken();
-
+            await SetupTestData();
             //Act
             await sut.StoreAsync(testKey, testCode);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Assert
-                var token = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.RefreshToken &&
-                                          t.Key == testKey);
+                var token = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
+                    t.TokenType == TokenType.RefreshToken &&
+                    t.Key == testKey);
 
-                Assert.NotNull(token);
+                token.Should().BeEquivalentTo(
+                    Mapper.Map<Token>(testCode),
+                    options => options
+                        .Excluding(x => x.Key)
+                        .Excluding(x => x.Expiry)
+                        .Excluding(x => x.JsonCode)
+                        .Excluding(x => x.TokenType)
+                        .Excluding(x => x.Id));
+                token.Key.Should().Be(testKey);
+                // Assume all times stored in the DB are UTC, don't convert
+                token.Expiry.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(testCode.LifeTime), new TimeSpan(0, 1, 0));
+                token.TokenType.Should().Be(TokenType.RefreshToken);
 
                 //CleanUp
-                session.Delete(token);
+                await session.DeleteAsync(token);
+            });
+        }
+
+        [Fact]
+        public async Task VerifyJsonCodeDataStructure()
+        {
+            // Setup
+            await SetupTestData();
+            var expected = GetJsonCodeFromRefreshToken(testCode);
+
+            await sut.StoreAsync(testKey, testCode);
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                //Act
+                var token = await session
+                    .Query<Token>()
+                    .SingleOrDefaultAsync(t => t.Key == testKey && t.TokenType == TokenType.RefreshToken);
+
+                //Assert
+                token.JsonCode.Should().Be(expected);
+            });
+
+            //CleanUp
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.DeleteAsync(tokenHandle);
+                session.Clear();
             });
         }
 
@@ -74,75 +171,54 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAsync()
         {
             //Arrange
-            var sut = new RefreshTokenStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetRefreshToken();
-
-            var tokenHandle = new Token
+            await SetupTestData();
+            await ExecuteInTransactionAsync(async session =>
             {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = testCode.CreationTime.UtcDateTime.AddSeconds(30),
-                TokenType = TokenType.RefreshToken
-            };
-
-            SetupScopeStoreMock();
-
-            ExecuteInTransaction(session =>
-            {
-                session.SaveOrUpdate(tokenHandle);
+                await session.SaveOrUpdateAsync(tokenHandle);
             });
 
             //Act
             var resultToken = await sut.GetAsync(testKey);
 
             //Assert
-            Assert.NotNull(resultToken);
+            resultToken.Should().BeOfType<RefreshToken>()
+                .Subject.Should().BeEquivalentTo(
+                testCode,
+                options => options
+                    .IgnoringCyclicReferences()
+                    .Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(tokenHandle);
+                await session.DeleteAsync(tokenHandle);
             });
-
         }
 
         [Fact]
         public async Task RemoveAsync()
         {
             //Arrange
-            var sut = new RefreshTokenStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetRefreshToken();
-
-            var tokenHandle = new Token
+            await SetupTestData();
+            await ExecuteInTransactionAsync(async session =>
             {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = testCode.CreationTime.UtcDateTime.AddSeconds(testCode.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            ExecuteInTransaction(session =>
-            {
-                session.SaveOrUpdate(tokenHandle);
+                await session.SaveOrUpdateAsync(tokenHandle);
             });
 
             //Act
             await sut.RemoveAsync(testKey);
 
             //Assert
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                var token = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.RefreshToken &&
-                                          t.Key == testKey);
+                var token = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
+                    t.TokenType == TokenType.RefreshToken &&
+                    t.Key == testKey);
 
-                Assert.Null(token);
+                token.Should().BeNull();
             });
         }
 
@@ -150,146 +226,89 @@ namespace Core.Nhibernate.IntegrationTests.Stores
         public async Task GetAllAsync()
         {
             //Arrange
-            var sut = new RefreshTokenStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-            var subjectId1 = Guid.NewGuid().ToString();
-            var subjectId2 = Guid.NewGuid().ToString();
+            await SetupTestData();
+            var client = await SetupClientAsync();
+            var subjectId1 = GetNewGuidString();
+            var subjectId2 = GetNewGuidString();
 
-            var testKey1 = Guid.NewGuid().ToString();
-            var testCode1 = ObjectCreator.GetRefreshToken(subjectId1);
-            var tokenHandle1 = new Token
+            var refreshToken1 = ObjectCreator.GetRefreshToken(client, subjectId1);
+            var refreshToken2 = ObjectCreator.GetRefreshToken(client, subjectId1);
+            var refreshToken3 = ObjectCreator.GetRefreshToken(client, subjectId2);
+            var refreshToken4 = ObjectCreator.GetRefreshToken(client, subjectId2);
+
+            var tokenHandle1 = GetToken(GetNewGuidString(), refreshToken1);
+            var tokenHandle2 = GetToken(GetNewGuidString(), refreshToken2);
+            var tokenHandle3 = GetToken(GetNewGuidString(), refreshToken3);
+            var tokenHandle4 = GetToken(GetNewGuidString(), refreshToken4);
+
+            await ExecuteInTransactionAsync(async session =>
             {
-                Key = testKey1,
-                SubjectId = testCode1.SubjectId,
-                ClientId = testCode1.ClientId,
-                JsonCode = ConvertToJson(testCode1),
-                Expiry = testCode1.CreationTime.UtcDateTime.AddSeconds(testCode1.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            var testKey2 = Guid.NewGuid().ToString();
-            var testCode2 = ObjectCreator.GetRefreshToken(subjectId1);
-            var tokenHandle2 = new Token
-            {
-                Key = testKey2,
-                SubjectId = testCode2.SubjectId,
-                ClientId = testCode2.ClientId,
-                JsonCode = ConvertToJson(testCode2),
-                Expiry = testCode2.CreationTime.UtcDateTime.AddSeconds(testCode2.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            var testKey3 = Guid.NewGuid().ToString();
-            var testCode3 = ObjectCreator.GetRefreshToken(subjectId2);
-            var tokenHandle3 = new Token
-            {
-                Key = testKey3,
-                SubjectId = testCode3.SubjectId,
-                ClientId = testCode3.ClientId,
-                JsonCode = ConvertToJson(testCode3),
-                Expiry = testCode3.CreationTime.UtcDateTime.AddSeconds(testCode3.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            var testKey4 = Guid.NewGuid().ToString();
-            var testCode4 = ObjectCreator.GetRefreshToken(subjectId2);
-            var tokenHandle4 = new Token
-            {
-                Key = testKey4,
-                SubjectId = testCode4.SubjectId,
-                ClientId = testCode4.ClientId,
-                JsonCode = ConvertToJson(testCode4),
-                Expiry = testCode4.CreationTime.UtcDateTime.AddSeconds(testCode4.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            SetupScopeStoreMock();
-
-            ExecuteInTransaction(session =>
-            {
-                session.SaveOrUpdate(tokenHandle1);
-                session.SaveOrUpdate(tokenHandle2);
-                session.SaveOrUpdate(tokenHandle3);
-                session.SaveOrUpdate(tokenHandle4);
+                await session.SaveOrUpdateAsync(tokenHandle1);
+                await session.SaveOrUpdateAsync(tokenHandle2);
+                await session.SaveOrUpdateAsync(tokenHandle3);
+                await session.SaveOrUpdateAsync(tokenHandle4);
             });
 
             //Act
             var tokens = (await sut.GetAllAsync(subjectId1)).ToList();
 
             //Assert
-            Assert.True(tokens.Count == 2);
-            Assert.True(tokens.All(t => t.SubjectId == subjectId1));
+            tokens.Should().BeEquivalentTo(new[] { refreshToken1, refreshToken2 }, options => options
+                .IgnoringCyclicReferences()
+                .Using<DateTimeOffset>(
+                    ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(tokenHandle1);
-                session.Delete(tokenHandle2);
-                session.Delete(tokenHandle3);
-                session.Delete(tokenHandle4);
+                await session.DeleteAsync(tokenHandle1);
+                await session.DeleteAsync(tokenHandle2);
+                await session.DeleteAsync(tokenHandle3);
+                await session.DeleteAsync(tokenHandle4);
             });
-
         }
 
         [Fact]
         public async Task RevokeAsync()
         {
             //Arrange
-            var sut = new RefreshTokenStore(NhibernateSession, ScopeStoreMock.Object, ClientStoreMock.Object);
-            var subjectIdToRevoke = Guid.NewGuid().ToString();
-            var clientIdToRevoke = Guid.NewGuid().ToString();
+            await SetupTestData();
+            var subjectIdToRevoke = GetNewGuidString();
+            var clientIdToRevoke = GetNewGuidString();
+            var client = await SetupClientAsync(clientIdToRevoke);
 
-            var testKey = Guid.NewGuid().ToString();
-            var testCode = ObjectCreator.GetRefreshToken();
+            var testKeyToRevoke = GetNewGuidString();
+            var testCodeToRevoke = ObjectCreator.GetRefreshToken(client, subjectIdToRevoke);
+            var tokenHandleToRevoke = GetToken(testKeyToRevoke, testCodeToRevoke);
 
-            var tokenHandle = new Token
+            await ExecuteInTransactionAsync(async session =>
             {
-                Key = testKey,
-                SubjectId = testCode.SubjectId,
-                ClientId = testCode.ClientId,
-                JsonCode = ConvertToJson(testCode),
-                Expiry = testCode.CreationTime.UtcDateTime.AddSeconds(testCode.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            var testKeyToRevoke = Guid.NewGuid().ToString();
-            var testCodeToRevoke = ObjectCreator.GetRefreshToken(subjectIdToRevoke, clientIdToRevoke);
-
-            var tokenHandleToRevoke = new Token
-            {
-                Key = testKeyToRevoke,
-                SubjectId = testCodeToRevoke.SubjectId,
-                ClientId = testCodeToRevoke.ClientId,
-                JsonCode = ConvertToJson(testCodeToRevoke),
-                Expiry = testCodeToRevoke.CreationTime.UtcDateTime.AddSeconds(testCodeToRevoke.LifeTime),
-                TokenType = TokenType.RefreshToken
-            };
-
-            ExecuteInTransaction(session =>
-            {
-                session.Save(tokenHandle);
-                session.Save(tokenHandleToRevoke);
-
+                await session.SaveAsync(tokenHandle);
+                await session.SaveAsync(tokenHandleToRevoke);
             });
 
             //Act
             await sut.RevokeAsync(subjectIdToRevoke, clientIdToRevoke);
 
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
                 //Assert
-                var tokenRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.RefreshToken &&
-                                          t.Key == testKeyToRevoke);
+                var tokenRevoked = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
+                    t.TokenType == TokenType.RefreshToken &&
+                    t.Key == testKeyToRevoke);
 
-                var tokenNotRevoked = session.Query<Token>()
-                    .SingleOrDefault(t => t.TokenType == TokenType.RefreshToken &&
-                                          t.Key == testKey);
+                var tokenNotRevoked = await session.Query<Token>()
+                    .SingleOrDefaultAsync(t => 
+                    t.TokenType == TokenType.RefreshToken &&
+                    t.Key == testKey);
 
-                Assert.Null(tokenRevoked);
-                Assert.NotNull(tokenNotRevoked);
+                tokenRevoked.Should().BeNull();
+                tokenNotRevoked.Should().BeEquivalentTo(tokenHandle);
 
                 //CleanUp
-                session.Delete(tokenNotRevoked);
+                await session.DeleteAsync(tokenNotRevoked);
             });
         }
 

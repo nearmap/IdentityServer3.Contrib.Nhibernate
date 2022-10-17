@@ -29,7 +29,7 @@ using IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
-    public class AutomappingConfiguration : DefaultAutomappingConfiguration
+    internal class AutomappingConfiguration : DefaultAutomappingConfiguration
     {
         private readonly bool _registerOperationalServices;
         private readonly bool _registerConfigurationServices;
@@ -65,8 +65,8 @@ namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
         public override bool ShouldMap(Type type)
         {
             var result = type.Namespace != null && type.Namespace.Equals("IdentityServer3.Contrib.Nhibernate.Entities")
-                         && (_registerOperationalServices && _operationalServicesEntities.Contains(type)
-                             || _registerConfigurationServices && _configurationServicesEntities.Contains(type));
+                && (_registerOperationalServices && _operationalServicesEntities.Contains(type)
+                    || _registerConfigurationServices && _configurationServicesEntities.Contains(type));
 
             return result;
         }

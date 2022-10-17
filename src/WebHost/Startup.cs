@@ -1,9 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using IdentityServer3.Core.Configuration;
+﻿using IdentityServer3.Core.Configuration;
 using Microsoft.Owin;
 using Owin;
 using Serilog;
+using Serilog.Extensions.Logging;
 using WebHost.Config;
 
 [assembly: OwinStartup(typeof(WebHost.Startup))]
@@ -14,19 +13,25 @@ namespace WebHost
     {
         public void Configuration(IAppBuilder appBuilder)
         {
-            Log.Logger = new LoggerConfiguration()
-               .MinimumLevel.Debug()
-               .WriteTo.Trace()
-               .WriteTo.RollingFile(@"C:\Users\RicardoSantos\Repos\Projects\IdentityServer3.Contrib.Nhibernate\src\WebHost\log\Log-{Date}.log")
-               .CreateLogger();
+            var providers = new LoggerProviderCollection();
 
-            appBuilder.Map("/core", core =>
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Trace()
+                .WriteTo.File(@"Log-{Date}.log")
+                .CreateLogger();
+
+            var factory = new SerilogLoggerFactory(Log.Logger, true, providers);
+
+            var logger = factory.CreateLogger("main");
+
+            appBuilder.Map("/core", async core =>
             {
                 var options = new IdentityServerOptions
                 {
                     SiteName = "IdentityServer3 (Nhibernate)",
                     SigningCertificate = Certificate.Get(),
-                    Factory = Factory.Configure("IdSvr3Config")
+                    Factory = await Factory.ConfigureAsync(logger)
                 };
 
                 core.UseIdentityServer(options);

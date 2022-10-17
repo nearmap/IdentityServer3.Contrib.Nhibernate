@@ -1,91 +1,65 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentNHibernate.Automapping;
-using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
-using FluentNHibernate.Conventions.Helpers;
-using IdentityServer3.Core.Configuration;
 using IdentityServer3.Core.Services;
 using NHibernate;
-using NHibernate.Cfg;
-using NHibernate.Tool.hbm2ddl;
-using System.Configuration;
-using Core.Nhibernate;
-using IdentityServer3.Contrib.Nhibernate;
 using IdentityServer3.Contrib.Nhibernate.Services;
 using IdentityServer3.Contrib.Nhibernate.Stores;
+using AutoMapper;
 
 namespace IdentityServer3.Core.Configuration
 {
     public static class IdentityServerServiceFactoryExtensions
     {
-
         public static void RegisterNhibernateStores(this IdentityServerServiceFactory factory,
-            NhibernateServiceOptions serviceOptions)
+            ISessionFactory nHibernateSessionFactory,
+            IMapper mapper,
+            bool registerOperationalServices = false, 
+            bool registerConfigurationServices = false)
         {
-            if (serviceOptions.RegisterOperationalServices || serviceOptions.RegisterConfigurationServices)
+            _ = factory ?? throw new ArgumentNullException(nameof(factory));
+            _ = nHibernateSessionFactory ?? throw new ArgumentNullException(nameof(nHibernateSessionFactory));
+            _ = mapper ?? throw new ArgumentNullException(nameof(mapper));
+
+            if (registerOperationalServices || registerConfigurationServices)
             {
-                RegisterSessionFactory(factory, serviceOptions);
+                RegisterSessionFactory(factory, nHibernateSessionFactory, mapper);
             }
 
-            if (serviceOptions.RegisterOperationalServices)
+            if (registerOperationalServices)
             {
-                RegisterOperationalServices(factory, serviceOptions);
+                RegisterOperationalServices(factory);
             }
 
-            if (serviceOptions.RegisterConfigurationServices)
+            if (registerConfigurationServices)
             {
-                RegisterConfigurationServices(factory, serviceOptions);
+                RegisterConfigurationServices(factory);
             }
         }
-        private static void RegisterOperationalServices(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
-        {
-            if (factory == null) throw new ArgumentNullException(nameof(factory));
-            if (serviceOptions == null) throw new ArgumentNullException(nameof(serviceOptions));
 
+        private static void RegisterOperationalServices(IdentityServerServiceFactory factory)
+        {
             factory.AuthorizationCodeStore = new Registration<IAuthorizationCodeStore, AuthorizationCodeStore>();
             factory.TokenHandleStore = new Registration<ITokenHandleStore, TokenHandleStore>();
             factory.ConsentStore = new Registration<IConsentStore, ConsentStore>();
             factory.RefreshTokenStore = new Registration<IRefreshTokenStore, RefreshTokenStore>();
         }
 
-        private static void RegisterConfigurationServices(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
+        private static void RegisterConfigurationServices(IdentityServerServiceFactory factory)
         {
-            RegisterClientStore(factory, serviceOptions);
-            RegisterScopeStore(factory, serviceOptions);
-        }
-
-        private static void RegisterClientStore(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
-        {
-            if (factory == null) throw new ArgumentNullException(nameof(factory));
-            if (serviceOptions == null) throw new ArgumentNullException(nameof(serviceOptions));
-
-            RegisterSessionFactory(factory, serviceOptions);
-
             factory.ClientStore = new Registration<IClientStore, ClientStore>();
             factory.CorsPolicyService = new Registration<ICorsPolicyService, ClientConfigurationCorsPolicyService>();
-
-        }
-
-        private static void RegisterScopeStore(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
-        {
-            if (factory == null) throw new ArgumentNullException(nameof(factory));
-            if (serviceOptions == null) throw new ArgumentNullException(nameof(serviceOptions));
-
-            RegisterSessionFactory(factory, serviceOptions);
-
             factory.ScopeStore = new Registration<IScopeStore, ScopeStore>();
         }
 
-        private static void RegisterSessionFactory(IdentityServerServiceFactory factory, NhibernateServiceOptions serviceOptions)
+        private static void RegisterSessionFactory(
+            IdentityServerServiceFactory factory, 
+            ISessionFactory NhibernateSessionFactory,
+            IMapper mapper)
         {
             if (factory.Registrations.All(r => r.DependencyType != typeof(ISessionFactory)))
             {
-                factory.Register(
-                    new Registration<ISessionFactory>(serviceOptions.NhibernateSessionFactory));
+                factory.Register(new Registration<IMapper>(mapper));
+                factory.Register(new Registration<ISessionFactory>(NhibernateSessionFactory));
                 factory.Register(new Registration<ISession>(c => c.Resolve<ISessionFactory>().OpenSession())
                 {
                     Mode = RegistrationMode.InstancePerHttpRequest

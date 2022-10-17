@@ -10,7 +10,7 @@ namespace IdentityServer3.Contrib.Nhibernate.Entities
 
         public virtual string Description { get; set; }
 
-        public virtual DateTimeOffset? Expiration { get; set; }
+        public virtual DateTime? Expiration { get; set; }
 
         public virtual Client Client { get; set; }
     }

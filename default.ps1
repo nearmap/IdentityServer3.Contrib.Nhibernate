@@ -1,5 +1,5 @@
 
-Framework '4.6'
+Framework '4.7.2'
 properties {
 	$base_directory = Resolve-Path . 
     $target_config = "Release"
@@ -8,30 +8,35 @@ properties {
 	$dist_directory = "$base_directory\distribution"
 	$sln_file = "$src_directory\IdentityServer3.Contrib.Nhibernate.sln"
 	
-	$framework_version = "v4.5"
-    $output_directory = "$src_directory\Core.Nhibernate\bin\$target_config"
-    $xunit_path = "$src_directory\packages\xunit.runner.console.2.1.0\tools\xunit.console.exe"
+	$framework_version = "v4.7.2"
+    $output_directory = "$src_directory\Core.Nhibernate\bin\$target_config\net472"
+	$obj_directory = "$src_directory\Core.Nhibernate\obj\$target_config"
+    $xunit_path = "$src_directory\packages\xunit.runner.console.2.4.1\tools\net472\xunit.console.exe"
     $nuget_path = "$src_directory\.nuget\nuget.exe"
+	$ilmerge_path = "$src_directory\packages\ILMerge.3.0.41\tools\net452\ILMerge.exe"
 	
 	$buildNumber = 0;
-	$version = "1.0.0.0"
+	$version = "2.0.0.0"
 	$preRelease = $null
+	$msbuild = null
 }
 
 
 task default -depends Clean, CreateNuGetPackage
-task appVeyor -depends Clean,RunIntegraionTests, CreateNuGetPackage
+task appVeyor -depends Clean, RunIntegraionTests, CreateNuGetPackage
 task myGet -depends Clean, CreateNuGetPackage
 
 task Clean {
 	rmdir $output_directory -ea SilentlyContinue -recurse
+	rmdir $obj_directory -ea SilentlyContinue -recurse
 	rmdir $dist_directory -ea SilentlyContinue -recurse
-	exec { msbuild /nologo /verbosity:quiet $sln_file /p:Configuration=$target_config /t:Clean }
+	exec { & $msbuild /nologo /verbosity:quiet $sln_file /p:Configuration=$target_config /t:Clean }
 }
 
 task Compile -depends UpdateVersion {
     
-	exec { msbuild /nologo /verbosity:q $sln_file /p:Configuration=$target_config /p:TargetFrameworkVersion=$framework_version}
+	exec { & $msbuild /nologo /verbosity:q $sln_file /p:Configuration=$target_config /t:Restore }
+	exec { & $msbuild /nologo /verbosity:q $sln_file /p:Configuration=$target_config /p:TargetFrameworkVersion=$framework_version }
 
 	if ($LastExitCode -ne 0) {
         exit $LastExitCode
@@ -66,7 +71,19 @@ task RunIntegraionTests -depends Compile, CopyConfigFile {
 	.$xunit_path "$src_directory\Core.Nhibernate.IntegrationTests\bin\$target_config\$project.dll"
 }
 
-task CreateNuGetPackage -depends Compile {
+task ILMerge -depends Compile {
+	$input_dlls = "$output_directory\Core.Nhibernate.dll"
+
+	New-Item $dist_directory\lib\net472 -Type Directory
+	
+  if ($preRelease){
+	  Invoke-Expression "$ilmerge_path /targetplatform:v4 /internalize /allowDup /target:library /out:$dist_directory\lib\net472\IdentityServer3.Contrib.Nhibernate.dll $input_dlls"
+  }else{
+	  Invoke-Expression "$ilmerge_path /ndebug /targetplatform:v4 /internalize /allowDup /target:library /out:$dist_directory\lib\net472\IdentityServer3.Contrib.Nhibernate.dll $input_dlls"
+  }
+}
+
+task CreateNuGetPackage -depends ILMerge {
 	$vSplit = $version.Split('.')
 	if($vSplit.Length -ne 4)
 	{
@@ -83,14 +100,8 @@ task CreateNuGetPackage -depends Compile {
 	if ($buildNumber -ne 0){
 		$packageVersion = $packageVersion + "-build" + $buildNumber.ToString().PadLeft(5,'0')
 	}
-
-  md $dist_directory
-  md $dist_directory\lib
-  md $dist_directory\lib\net45
   
   copy-item $src_directory\IdentityServer3.Contrib.Nhibernate.nuspec $dist_directory
-  copy-item $output_directory\IdentityServer3.Contrib.Nhibernate.dll $dist_directory\lib\net45
-  copy-item $output_directory\IdentityServer3.Contrib.Nhibernate.pdb $dist_directory\lib\net45
   
-	exec { . $nuget_path pack $dist_directory\IdentityServer3.Contrib.Nhibernate.nuspec -BasePath $dist_directory -o $dist_directory -version $packageVersion }
+	exec { . $nuget_path pack $dist_directory\IdentityServer3.Contrib.Nhibernate.nuspec -BasePath $dist_directory -OutputDirectory $dist_directory -version $packageVersion }
 }
