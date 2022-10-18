@@ -23,25 +23,43 @@
 
 
 using FluentNHibernate.Automapping;
+using FluentNHibernate.Cfg;
+using FluentNHibernate.Conventions;
 using FluentNHibernate.Conventions.Helpers;
 using IdentityServer3.Contrib.Nhibernate.Entities;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace IdentityServer3.Contrib.Nhibernate.NhibernateConfig
 {
-    public class MappingHelper
+    public static class MappingHelper
     {
-        public static AutoPersistenceModel GetNhibernateServicesMappings(bool registerOperationalServices, bool registerConfigurationServices)
+        public static AutoPersistenceModel GetNhibernateServicesMappings(
+            bool registerOperationalServices,
+            bool registerConfigurationServices,
+            IEnumerable<IConvention> conventions = null)
         {
             var config = new AutomappingConfiguration(registerOperationalServices, registerConfigurationServices);
 
-            var map = AutoMap.AssemblyOf<IBaseEntity>(config)
+            var map = AutoMap.AssemblyOf<BaseEntity>(config)
                 .Conventions.Add(DefaultCascade.All())
-                .UseOverridesFromAssemblyOf<IBaseEntity>()
+                .UseOverridesFromAssemblyOf<BaseEntity>()
                 .IgnoreBase(typeof(BaseEntity<>));
+
+            if (conventions != null)
+            {
+                map.Conventions.Add(conventions.ToArray());
+            }
 
             return map;
         }
 
-
+        public static void ConfigureNhibernateServicesMappings(
+            this MappingConfiguration m, 
+            bool registerOperationalServices, 
+            bool registerConfigurationServices, 
+            IEnumerable<IConvention> conventions = null)
+            => m.AutoMappings.Add(
+                GetNhibernateServicesMappings(registerOperationalServices, registerConfigurationServices, conventions));
     }
 }

@@ -1,50 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Core.Nhibernate;
-using FluentNHibernate.Automapping;
+using AutoMapper;
 using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
-using FluentNHibernate.Conventions.Helpers;
-using FluentNHibernate.Data;
 using IdentityServer3.Contrib.Nhibernate;
+using IdentityServer3.Contrib.Nhibernate.Postgres;
+using IdentityServer3.Contrib.Nhibernate.Profiles;
+using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
 using IdentityServer3.Core.Configuration;
-using IdentityServer3.Core.Models;
+using Microsoft.Extensions.Logging;
 using NHibernate;
-using NHibernate.Linq;
 using NHibernate.Tool.hbm2ddl;
 using Client = IdentityServer3.Core.Models.Client;
 using Configuration = NHibernate.Cfg.Configuration;
 using Scope = IdentityServer3.Core.Models.Scope;
+using Entities = IdentityServer3.Contrib.Nhibernate.Entities;
 
 namespace WebHost.Config
 {
-    class Factory
+    static class Factory
     {
-        public static IdentityServerServiceFactory Configure(string connString)
+        private static readonly IMapper mapper = new MapperConfiguration(
+            cfg => cfg.AddProfile(new EntitiesProfileNpgSql6()))
+            .CreateMapper();
+
+        public static async Task<IdentityServerServiceFactory> ConfigureAsync(ILogger logger)
         {
             var nhSessionFactory = GetNHibernateSessionFactory();
             var nhSession = nhSessionFactory.OpenSession();
             var tokenCleanUpSession = nhSessionFactory.OpenSession();
 
-            var cleanup = new TokenCleanup(tokenCleanUpSession, 60);
+            var cleanup = new TokenCleanup(tokenCleanUpSession, null, 60);
             cleanup.Start();
 
             // these two calls just pre-populate the test DB from the in-memory config
-            ConfigureClients(Clients.Get(), nhSession);
-            ConfigureScopes(Scopes.Get(), nhSession);
+            await ConfigureClientsAsync(Clients.Get(), nhSession);
+            await ConfigureScopesAsync(Scopes.Get(), nhSession);
 
             var factory = new IdentityServerServiceFactory();
 
-            factory.RegisterNhibernateStores(new NhibernateServiceOptions(nhSessionFactory)
-            {
-                RegisterOperationalServices = true,
-                RegisterConfigurationServices = true
-            });
+            factory.RegisterNhibernateStores(nhSessionFactory, 
+                mapper, 
+                registerOperationalServices: true, 
+                registerConfigurationServices: true);
 
             factory.UseInMemoryUsers(Users.Get().ToList());
 
@@ -53,66 +52,64 @@ namespace WebHost.Config
 
         private static ISessionFactory GetNHibernateSessionFactory()
         {
-            var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
-
             var sessionFactory = Fluently.Configure()
-                .Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
-                    .ShowSql()
-                    .FormatSql())
+                .Database(DatabaseConfig.DbConfig)
                 .Mappings(
-                    m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true)))
+                    m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(
+                        registerOperationalServices: true, 
+                        registerConfigurationServices: true))
+                )
+                .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
-                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg);
+                    DatabaseConfig.ConfigAction(cfg);
                     BuildSchema(cfg);
                 })
                 .BuildSessionFactory();
 
             return sessionFactory;
-
         }
 
         private static void BuildSchema(Configuration cfg)
         {
-            new SchemaUpdate(cfg).Execute(false, true);
+            new SchemaUpdate(cfg).Execute(false, true);    
         }
 
-        public static void ConfigureClients(ICollection<Client> clients, ISession nhSession)
+        public static async Task ConfigureClientsAsync(ICollection<Client> clients, ISession nhSession)
         {
             using (var tx = nhSession.BeginTransaction())
             {
-                var clientsInDb = nhSession.Query<IdentityServer3.Contrib.Nhibernate.Entities.Client>();
+                var clientsInDb = nhSession.Query<Entities.Client>();
 
                 if (clientsInDb.Any()) return;
 
-                var toSave = clients.Select(c => c.ToEntity()).ToList();
+                var clientStore = new ClientStore(nhSession, mapper);
 
-                foreach (var client in toSave)
+                foreach (var client in clients)
                 {
-                    var result = nhSession.Save(client);
+                    await clientStore.SaveAsync(client);
                 }
 
-                tx.Commit();
+                await tx.CommitAsync();
             }
-
         }
 
-        public static void ConfigureScopes(ICollection<Scope> scopes, ISession nhSession)
+        public static async Task ConfigureScopesAsync(ICollection<Scope> scopes, ISession nhSession)
         {
             using (var tx = nhSession.BeginTransaction())
             {
-                var scopesInDb = nhSession.Query<IdentityServer3.Contrib.Nhibernate.Entities.Scope>();
+                var scopesInDb = nhSession.Query<Entities.Scope>();
 
                 if (scopesInDb.Any()) return;
 
-                var toSave = scopes.Select(s => s.ToEntity()).ToList();
+                var scopeStore = new ScopeStore(nhSession, mapper);
 
-                foreach (var scope in toSave)
+                foreach (var scope in scopes)
                 {
-                    var result = nhSession.Save(scope);
+                    await scopeStore.SaveAsync(scope);
                 }
 
-                tx.Commit();
+                await tx.CommitAsync();
             }
         }
     }

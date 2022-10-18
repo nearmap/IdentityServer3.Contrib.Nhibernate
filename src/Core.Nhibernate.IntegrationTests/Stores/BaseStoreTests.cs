@@ -1,6 +1,7 @@
 /*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -25,65 +26,64 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentNHibernate.Cfg;
-using FluentNHibernate.Cfg.Db;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
-using IdentityServer3.Contrib.Nhibernate.Serialization;
-using IdentityServer3.Core.Models;
+using IdentityServer3.Contrib.Nhibernate.Postgres;
+using IdentityServer3.Contrib.Nhibernate.Stores;
 using IdentityServer3.Core.Services;
-using Moq;
 using Newtonsoft.Json;
 using NHibernate;
 using NHibernate.Tool.hbm2ddl;
 using Configuration = NHibernate.Cfg.Configuration;
+using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using ClientModel = IdentityServer3.Core.Models.Client;
+using ScopeEntity = IdentityServer3.Contrib.Nhibernate.Entities.Scope;
+using ScopeModel = IdentityServer3.Core.Models.Scope;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
     public abstract class BaseStoreTests
     {
+        protected readonly IMapper Mapper;
         protected ISessionFactory NhSessionFactory;
 
-        protected ISession NhibernateSession { get; }
-        private readonly ISession _nhibernateAuxSession;
+        protected ISession Session { get; }
+        private readonly ISession _readSession;
 
-        protected readonly Mock<IScopeStore> ScopeStoreMock = new Mock<IScopeStore>();
-        protected readonly Mock<IClientStore> ClientStoreMock = new Mock<IClientStore>();
+        protected readonly IScopeStore ScopeStore;
+        protected readonly IClientStore ClientStore;
 
-        protected BaseStoreTests()
+        protected BaseStoreTests(IMapper mapper)
         {
-            //HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
+            Mapper = mapper;
             NhSessionFactory = GetNHibernateSessionFactory();
 
-            _nhibernateAuxSession = NhSessionFactory.OpenSession();
-            NhibernateSession = NhSessionFactory.OpenSession();
+            _readSession = NhSessionFactory.OpenSession();
+            Session = NhSessionFactory.OpenSession();
+
+            ScopeStore = new ScopeStore(Session, mapper);
+            ClientStore = new ClientStore(Session, mapper);
         }
 
         private ISessionFactory GetNHibernateSessionFactory()
         {
-            var connString = ConfigurationManager.ConnectionStrings["IdSvr3Config"];
-
             var sessionFactory = Fluently.Configure()
-                .Database(MsSqlConfiguration.MsSql2012.ConnectionString(connString.ToString())
-                    .ShowSql()
-                    .FormatSql()
-                    .AdoNetBatchSize(20)
-                )
+                .Database(Config.DbConfig)
                 .Mappings(
                     m => m.AutoMappings.Add(MappingHelper.GetNhibernateServicesMappings(true, true))
                 )
+                .Mappings(m => m.FluentMappings.Conventions.Add(typeof(TimeStampConvention)))
                 .ExposeConfiguration(cfg =>
                 {
-                    SchemaMetadataUpdater.QuoteTableAndColumns(cfg);
+                    Config.ConfigAction(cfg);
                     BuildSchema(cfg);
                 })
                 .BuildSessionFactory();
 
             return sessionFactory;
-
         }
 
         private void BuildSchema(Configuration cfg)
@@ -91,59 +91,73 @@ namespace Core.Nhibernate.IntegrationTests.Stores
             new SchemaUpdate(cfg).Execute(false, true);
         }
 
-        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhibernateAuxSession.Transaction != null && _nhibernateAuxSession.Transaction.IsActive)
+            if (_readSession.Transaction != null && _readSession.Transaction.IsActive)
             {
-                actionToExecute.Invoke(_nhibernateAuxSession);
+                await actionToExecute(_readSession);
             }
             else
             {
-                using (var tx = _nhibernateAuxSession.BeginTransaction(isolationLevel))
+                using (var tx = _readSession.BeginTransaction(isolationLevel))
                 {
                     try
                     {
-                        actionToExecute.Invoke(_nhibernateAuxSession);
-                        tx.Commit();
+                        await actionToExecute(_readSession);
+                        await tx.CommitAsync();
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }
-
             }
         }
 
-        private JsonSerializerSettings GetJsonSerializerSettings()
-        {
-            var settings = new JsonSerializerSettings();
-            settings.Converters.Add(new ClaimConverter());
-            settings.Converters.Add(new ClaimsPrincipalConverter());
-            settings.Converters.Add(new ClientConverter(ClientStoreMock.Object));
-            settings.Converters.Add(new ScopeConverter(ScopeStoreMock.Object));
-            return settings;
-        }
+        protected string GetNewGuidString() => Guid.NewGuid().ToString();
 
-        protected string ConvertToJson<T>(T value)
+        protected static JsonSerializerSettings SerializerSettings
+            => new JsonSerializerSettings()
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+
+        protected string ConvertToJson<T, TEntity>(T value)
         {
-            return JsonConvert.SerializeObject(value, GetJsonSerializerSettings());
+            return JsonConvert.SerializeObject(Mapper.Map<TEntity>(value), SerializerSettings);
         }
 
         protected T ConvertFromJson<T>(string json)
         {
-            return JsonConvert.DeserializeObject<T>(json, GetJsonSerializerSettings());
+            return JsonConvert.DeserializeObject<T>(json, SerializerSettings);
         }
 
-        protected virtual void SetupScopeStoreMock()
+        protected async Task<ClientModel> SetupClientAsync(string clientId = null)
         {
-            ScopeStoreMock.Setup(st => st.FindScopesAsync(It.IsAny<IEnumerable<string>>()))
-                .Returns((IEnumerable<string> scopeNames) =>
+            var testClient = ObjectCreator.GetClient(clientId);
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.SaveAsync(Mapper.Map<ClientEntity>(testClient));
+            });
+
+            return testClient;
+        }
+
+        protected async Task<IEnumerable<ScopeModel>> SetupScopesAsync(int count)
+        {
+            var scopes = ObjectCreator.GetScopes(count);
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                foreach(var scope in scopes)
                 {
-                    return Task.FromResult(
-                        scopeNames.Select(s => new Scope { Name = s, DisplayName = s }));
-                });
+                    await session.SaveAsync(Mapper.Map<ScopeEntity>(scope));
+                }
+            });
+
+            return scopes;
         }
     }
 }

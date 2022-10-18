@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -22,53 +23,115 @@
 */
 
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Enums;
+using IdentityServer3.Core;
 using IdentityServer3.Core.Models;
 using IdentityServer3.Core.Services;
 using NHibernate;
 using NHibernate.Linq;
 using Token = IdentityServer3.Contrib.Nhibernate.Entities.Token;
+using NHibRefreshToken = IdentityServer3.Contrib.Nhibernate.Models.RefreshToken;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class RefreshTokenStore : BaseTokenStore<RefreshToken>, IRefreshTokenStore
     {
-        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore)
-            : base(session, TokenType.RefreshToken, scopeStore, clientStore)
+        public RefreshTokenStore(ISession session, IScopeStore scopeStore, IClientStore clientStore, IMapper mapper)
+            : base(session, TokenType.RefreshToken, scopeStore, clientStore, mapper)
         {
 
         }
 
-        public override async Task StoreAsync(string key, RefreshToken value)
+        public override async Task<RefreshToken> GetAsync(string key)
+            => await ExecuteInTransactionAsync(session => GetInnerAsync(session, key));
+
+        private async Task<RefreshToken> GetInnerAsync(ISession session, string key)
         {
-            ExecuteInTransaction(session =>
+            var token = await session
+                .Query<Token>()
+                .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow);
+
+            if (token == null) { return null; }
+
+            var refreshToken = await GetRefreshTokenFromToken(token);
+
+            return refreshToken;
+        }
+
+        public override async Task<IEnumerable<ITokenMetadata>> GetAllAsync(string subjectId)
+            => await ExecuteInTransactionAsync(session => GetAllInnerAsync(session, subjectId));
+
+        private async Task<IEnumerable<ITokenMetadata>> GetAllInnerAsync(ISession session, string subjectId)
+        {
+            var tokens = await session.Query<Token>()
+                .Where(t => t.SubjectId == subjectId && t.TokenType == TokenType && t.Expiry > DateTime.UtcNow)
+                .ToListAsync();
+
+            if (!tokens.Any()) return new List<ITokenMetadata>();
+
+            var tokenList = new List<ITokenMetadata>();
+
+            foreach (var token in tokens)
             {
-                var token = session
-                       .Query<Token>()
-                       .SingleOrDefault(t => t.Key == key && t.TokenType == TokenType);
+                var refreshToken = await GetRefreshTokenFromToken(token);
 
-                if (token == null)
+                if (refreshToken is null) { continue; }
+
+                tokenList.Add(refreshToken);
+            }
+
+            return tokenList;
+        }
+
+        private async Task<RefreshToken> GetRefreshTokenFromToken(Token token)
+        {
+            var nhibRefreshToken = ConvertFromJson<NHibRefreshToken>(token.JsonCode);
+
+            var refreshToken = _mapper.Map<RefreshToken>(nhibRefreshToken);
+
+            if (refreshToken == null) { return null; }
+
+            refreshToken.AccessToken.Client = await ClientStore
+                .FindClientByIdAsync(nhibRefreshToken.AccessToken.Client.ClientId);
+
+            var claims = nhibRefreshToken.Subject.Claims.Select(x => new Claim(x.Type, x.Value));
+            refreshToken.Subject = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    claims, nhibRefreshToken.Subject.AuthenticationType, Constants.ClaimTypes.Name, Constants.ClaimTypes.Role));
+
+            return refreshToken;
+        }
+
+        public override async Task StoreAsync(string key, RefreshToken value)
+            => await ExecuteInTransactionAsync(session => StoreInnerAsync(session, key, value));
+
+        private async Task StoreInnerAsync(ISession session, string key, RefreshToken value)
+        {
+            var token = await session
+                    .Query<Token>()
+                    .SingleOrDefaultAsync(t => t.Key == key && t.TokenType == TokenType);
+
+            if (token == null)
+            {
+                token = new Token
                 {
-                    token = new Token
-                    {
-                        Key = key,
-                        SubjectId = value.SubjectId,
-                        ClientId = value.ClientId,
-                        TokenType = TokenType
-                    };
+                    Key = key,
+                    SubjectId = value.SubjectId,
+                    ClientId = value.ClientId,
+                    TokenType = TokenType
+                };
+            }
 
-                    session.Save(token);
-                }
+            token.JsonCode = ConvertToJson<NHibRefreshToken>(value);
+            token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
 
-                token.JsonCode = ConvertToJson(value);
-                token.Expiry = value.CreationTime.UtcDateTime.AddSeconds(value.LifeTime);
-
-                session.Update(token);
-            });
-
-            await TaskExtensions.CompletedTask;
+            await session.SaveOrUpdateAsync(token);
         }
     }
 }

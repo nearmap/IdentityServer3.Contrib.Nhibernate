@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +25,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Core.Services;
 using NHibernate;
@@ -35,126 +36,93 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public class ConsentStore : NhibernateStore, IConsentStore
     {
-        public ConsentStore(ISession session)
-            : base(session)
+        public ConsentStore(ISession session, IMapper mapper)
+            : base(session, mapper)
         {
         }
 
-        public async Task<IdentityServer3.Core.Models.Consent> LoadAsync(string subject, string client)
+        public async Task<Core.Models.Consent> LoadAsync(string subject, string client)
         {
-            var result = ExecuteInTransaction(session =>
-              {
-                  var item = session
-                             .Query<Consent>()
-                             .SingleOrDefault(c => c.Subject == subject && c.ClientId == client);
-
-                  return item == null
-                      ? null
-                      : new IdentityServer3.Core.Models.Consent
-                      {
-                          Subject = item.Subject,
-                          ClientId = item.ClientId,
-                          Scopes = ParseScopes(item.Scopes)
-                      };
-              });
-
-            return await Task.FromResult(result);
-        }
-
-        public async Task UpdateAsync(IdentityServer3.Core.Models.Consent consent)
-        {
-            ExecuteInTransaction(session =>
+            var item = await ExecuteInTransactionAsync(async session =>
             {
-                var item = session
-                        .Query<Consent>()
-                        .SingleOrDefault(c => c.Subject == consent.Subject && c.ClientId == consent.ClientId);
+                var consent = await session.Query<Consent>()
+                    .SingleOrDefaultAsync(c => c.Subject == subject && c.ClientId == client);
 
-                if (item == null)
-                {
-                    if (consent.Scopes == null || !consent.Scopes.Any()) return;
-
-                    item = new Consent
-                    {
-                        Subject = consent.Subject,
-                        ClientId = consent.ClientId,
-                        Scopes = StringifyScopes(consent.Scopes)
-                    };
-
-                    session.Save(item);
-                }
-                else
-                {
-                    if (consent.Scopes == null || !consent.Scopes.Any())
-                    {
-                        session.Delete(item);
-                    }
-
-                    item.Scopes = StringifyScopes(consent.Scopes);
-
-                    session.SaveOrUpdate(item);
-                }
+                return consent;
             });
 
-            await TaskExtensions.CompletedTask;
+            return item == null
+                ? null
+                : new Core.Models.Consent
+                {
+                    Subject = item.Subject,
+                    ClientId = item.ClientId,
+                    Scopes = ParseScopes(item.Scopes)
+                };
         }
 
-        public async Task<IEnumerable<IdentityServer3.Core.Models.Consent>> LoadAllAsync(string subject)
+        public async Task UpdateAsync(Core.Models.Consent consent)
+            => await ExecuteInTransactionAsync(async session => await UpdateInnerAsync(session, consent));
+
+        private async Task UpdateInnerAsync(ISession session, Core.Models.Consent consent)
         {
-            var results = ExecuteInTransaction(session =>
-              {
-                  var items = session.Query<Consent>()
-                         .Where(c => c.Subject == subject)
-                         .ToList();
+            var item = await session.Query<Consent>()
+                    .SingleOrDefaultAsync(c => c.Subject == consent.Subject && c.ClientId == consent.ClientId);
 
-                  return items.Select(i => new IdentityServer3.Core.Models.Consent
-                  {
-                      Subject = i.Subject,
-                      ClientId = i.ClientId,
-                      Scopes = ParseScopes(i.Scopes)
-                  }).ToList();
-              });
+            if (item == null)
+            {
+                if (!consent.Scopes?.Any() ?? true) { return; }
 
-            return await Task.FromResult(results);
+                item = new Consent
+                {
+                    Subject = consent.Subject,
+                    ClientId = consent.ClientId,
+                    Scopes = string.Join(",", consent.Scopes)
+                };
+
+                await session.SaveAsync(item);
+            }
+            else
+            {
+                if (!consent.Scopes?.Any() ?? true)
+                {
+                    await session.DeleteAsync(item);
+                }
+                
+                item.Scopes = string.Join(",", consent.Scopes);
+                await session.SaveOrUpdateAsync(item);
+            }
+        }
+
+        public async Task<IEnumerable<Core.Models.Consent>> LoadAllAsync(string subject)
+        {
+            var items = await ExecuteInTransactionAsync(async session =>
+            {
+                return await session.Query<Consent>()
+                    .Where(c => c.Subject == subject)
+                    .ToListAsync();
+            });
+
+            return items.Select(i => new IdentityServer3.Core.Models.Consent
+            {
+                Subject = i.Subject,
+                ClientId = i.ClientId,
+                Scopes = ParseScopes(i.Scopes)
+            }).ToList();
         }
 
         private IEnumerable<string> ParseScopes(string scopes)
-        {
-            return string.IsNullOrWhiteSpace(scopes) ? Enumerable.Empty<string>() : scopes.Split(',');
-        }
-
-        private string StringifyScopes(IEnumerable<string> scopes)
-        {
-            var enumerable = scopes as string[] ?? scopes.ToArray();
-            if (scopes == null || !enumerable.Any())
-            {
-                return null;
-            }
-
-            var sb = new StringBuilder();
-            foreach (var scope in enumerable)
-            {
-                sb.Append(scope);
-                sb.Append(",");
-            }
-
-            sb.Remove(sb.Length - 1, 1);
-
-            return sb.ToString();
-        }
+            => string.IsNullOrWhiteSpace(scopes) ? Enumerable.Empty<string>() : scopes.Split(',');
 
         public async Task RevokeAsync(string subject, string client)
-        {
-            ExecuteInTransaction(session =>
+            => await ExecuteInTransactionAsync(async session =>
             {
-                session.CreateQuery($"DELETE {nameof(Consent)} c " +
+                await session.CreateQuery($"DELETE {nameof(Consent)} c " +
                                     $"WHERE c.{nameof(Consent.Subject)} = :subject " +
                                     $"and c.{nameof(Consent.ClientId)} = :clientId")
                     .SetParameter("subject", subject)
                     .SetParameter("clientId", client)
-                    .ExecuteUpdate();
+                    .ExecuteUpdateAsync();
             });
-
-            await TaskExtensions.CompletedTask;
-        }
     }
 }

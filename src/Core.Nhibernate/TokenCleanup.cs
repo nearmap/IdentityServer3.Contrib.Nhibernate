@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Nhibernate.Logging;
 using IdentityServer3.Contrib.Nhibernate.Entities;
+using Microsoft.Extensions.Logging;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate
@@ -10,13 +10,14 @@ namespace IdentityServer3.Contrib.Nhibernate
     public class TokenCleanup
     {
         private readonly ISession _session;
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
+        private readonly ILogger _logger;
 
         CancellationTokenSource _source;
         readonly TimeSpan _interval;
 
-        public TokenCleanup(ISession session, int interval = 60)
+        public TokenCleanup(ISession session, ILogger logger, int interval = 60)
         {
+            _logger = logger;
             _session = session;
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (interval < 1) throw new ArgumentException("interval must be more than 1 second");
@@ -46,7 +47,7 @@ namespace IdentityServer3.Contrib.Nhibernate
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.Info("CancellationRequested");
+                    _logger.LogInformation("CancellationRequested");
                     break;
                 }
 
@@ -56,35 +57,33 @@ namespace IdentityServer3.Contrib.Nhibernate
                 }
                 catch
                 {
-                    Logger.Info("Task.Delay exception. exiting.");
+                    _logger.LogInformation("Task.Delay exception. exiting.");
                     break;
                 }
 
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Logger.Info("CancellationRequested");
+                    _logger.LogInformation("CancellationRequested");
                     break;
                 }
 
-                await ClearTokens();
+                await ClearTokensAsync();
             }
         }
 
-        private async Task ClearTokens()
+        private async Task ClearTokensAsync()
         {
             try
             {
-                Logger.Info("Clearing tokens");
+                _logger.LogInformation("Clearing tokens");
 
-                _session.CreateQuery($"DELETE {nameof(Token)} t WHERE t.{nameof(Token.Expiry)} < :refDate")
-                    .SetParameter("refDate", DateTimeOffset.UtcNow)
-                    .ExecuteUpdate();
-
-                await Task.FromResult(0);
+                await _session.CreateQuery($"DELETE {nameof(Token)} t WHERE t.{nameof(Token.Expiry)} < :refDate")
+                    .SetParameter("refDate", DateTime.UtcNow)
+                    .ExecuteUpdateAsync();
             }
             catch (Exception ex)
             {
-                Logger.ErrorException("Exception cleaning tokens", ex);
+                _logger.LogInformation("Exception cleaning tokens", ex);
             }
         }
     }

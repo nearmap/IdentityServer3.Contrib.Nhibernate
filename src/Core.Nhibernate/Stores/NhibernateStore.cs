@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -24,26 +25,41 @@
 
 using System;
 using System.Data;
+using System.Threading.Tasks;
+using AutoMapper;
 using NHibernate;
 
 namespace IdentityServer3.Contrib.Nhibernate.Stores
 {
     public abstract class NhibernateStore
     {
+        protected readonly IMapper _mapper;
         private readonly ISession _nhSession;
 
-        protected NhibernateStore(ISession session)
+        protected NhibernateStore(ISession session, IMapper mapper)
         {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            _nhSession = session;
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _nhSession = session ?? throw new ArgumentNullException(nameof(session));
         }
 
-        protected void ExecuteInTransaction(Action<ISession> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task<object> SaveAsync(object obj)
+            => await ExecuteInTransactionAsync(session => session.SaveAsync(obj));
+
+        protected async Task ExecuteInTransactionAsync(Func<ISession, Task> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhSession.Transaction != null && _nhSession.Transaction.IsActive)
+            var transaction = _nhSession.Transaction;
+
+            if (transaction != null && transaction.IsActive)
             {
-                actionToExecute.Invoke(_nhSession);
+                try
+                {
+                    await actionToExecute(_nhSession);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             else
             {
@@ -51,12 +67,12 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 {
                     try
                     {
-                        actionToExecute.Invoke(_nhSession);
-                        tx.Commit();
+                        await actionToExecute(_nhSession);
+                        await tx.CommitAsync();
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }
@@ -64,12 +80,21 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
             }
         }
 
-        protected T ExecuteInTransaction<T>(Func<ISession, T> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        protected async Task<T> ExecuteInTransactionAsync<T>(Func<ISession, Task<T>> actionToExecute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            if (_nhSession.Transaction != null && _nhSession.Transaction.IsActive)
+            var transaction = _nhSession.Transaction;
+
+            if (transaction != null && transaction.IsActive)
             {
-                var result = actionToExecute.Invoke(_nhSession);
-                return result;
+                try
+                {
+                    return await actionToExecute(_nhSession);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             else
             {
@@ -77,18 +102,17 @@ namespace IdentityServer3.Contrib.Nhibernate.Stores
                 {
                     try
                     {
-                        var result = actionToExecute.Invoke(_nhSession);
-                        tx.Commit();
+                        var result = await actionToExecute(_nhSession);
+                        await tx.CommitAsync();
                         return result;
                     }
                     catch (Exception)
                     {
-                        tx.Rollback();
+                        await tx.RollbackAsync();
                         throw;
                     }
                 }
             }
         }
-
     }
 }

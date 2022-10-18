@@ -1,6 +1,7 @@
 ﻿/*MIT License
 *
 *Copyright (c) 2016 Ricardo Santos
+*Copyright (c) 2022 Nearmap
 *
 *Permission is hereby granted, free of charge, to any person obtaining a copy
 *of this software and associated documentation files (the "Software"), to deal
@@ -23,58 +24,73 @@
 
 
 
-using System.Data;
+using System;
 using System.Threading.Tasks;
+using AutoMapper;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Stores;
-using IdentityServer3.Core.Models;
-using NHibernate;
+using IdentityServer3.Core.Services;
 using Xunit;
+
+using ClientEntity = IdentityServer3.Contrib.Nhibernate.Entities.Client;
+using ClientModel = IdentityServer3.Core.Models.Client;
 
 namespace Core.Nhibernate.IntegrationTests.Stores
 {
-    public class ClientStoreTests : BaseStoreTests
+    public abstract class ClientStoreTests : BaseStoreTests
     {
+        private readonly IClientStore sut;
 
-        public ClientStoreTests()
+        private readonly ClientEntity testClient1Entity;
+        private readonly ClientEntity testClient2Entity;
+        private readonly ClientEntity testClient3Entity;
+
+        protected ClientStoreTests(IMapper mapper) : base(mapper)
         {
+            sut = new ClientStore(Session, mapper);
+
+            testClient1Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
+            testClient2Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
+            testClient3Entity = Mapper.Map<ClientModel, ClientEntity>(ObjectCreator.GetClient());
         }
 
         [Fact]
         public async Task FindClientByIdAsync()
         {
-            var clientIdToFind = "ClientIdToFind";
-
             //Arrange
-            var sut = new ClientStore(NhibernateSession);
-            var testClient1Entity = ObjectCreator.GetClient().ToEntity();
-            var testClient2Entity = ObjectCreator.GetClient().ToEntity();
-            var testClient3Entity = ObjectCreator.GetClient().ToEntity();
-
-            var testClientToFind = ObjectCreator.GetClient(clientIdToFind);
-            var testClientToFindEntity = testClientToFind.ToEntity();
-
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Save(testClient1Entity);
-                session.Save(testClient2Entity);
-                session.Save(testClient3Entity);
-                session.Save(testClientToFindEntity);
+                await session.SaveAsync(testClient1Entity);
+                await session.SaveAsync(testClient2Entity);
+                await session.SaveAsync(testClient3Entity);
+            });
+            var testClientToFind = ObjectCreator.GetClient();
+            var testClientToFindEntity = Mapper.Map<ClientModel, ClientEntity>(testClientToFind);
+
+            await ExecuteInTransactionAsync(async session =>
+            {
+                await session.SaveAsync(testClientToFindEntity);
             });
 
             //Act
-            var result = await sut.FindClientByIdAsync(clientIdToFind);
+            var result = await sut.FindClientByIdAsync(testClientToFind.ClientId);
 
             //Assert
-            Assert.NotNull(result);
-            Assert.Equal(clientIdToFind, result.ClientId);
+            result.Should().BeEquivalentTo(
+                testClientToFind,
+                options => options
+                    .IgnoringCyclicReferences()
+                    .Using<DateTimeOffset>(
+                        ctx => ctx.Subject.Should().BeCloseTo(ctx.Expectation, new TimeSpan(10)))
+                    .WhenTypeIs<DateTimeOffset>());
 
             //CleanUp
-            ExecuteInTransaction(session =>
+            await ExecuteInTransactionAsync(async session =>
             {
-                session.Delete(testClient1Entity);
-                session.Delete(testClient2Entity);
-                session.Delete(testClient3Entity);
-                session.Delete(testClientToFindEntity);
+                await session.DeleteAsync(testClientToFindEntity);
+                await session.DeleteAsync(testClient1Entity);
+                await session.DeleteAsync(testClient2Entity);
+                await session.DeleteAsync(testClient3Entity);
             });
         }
     }

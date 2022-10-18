@@ -25,57 +25,46 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentNHibernate.Mapping;
-using FluentNHibernate.Testing;
+using FluentAssertions;
 using IdentityServer3.Contrib.Nhibernate.Entities;
 using IdentityServer3.Contrib.Nhibernate.NhibernateConfig;
-using Moq;
-using NHibernate;
-using NHibernate.Mapping.ByCode.Conformist;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Core.Nhibernate.Tests
 {
     public class AutoMappingTests
     {
         private readonly List<Type> _operationalServicesEntities = new List<Type>
-            {
-                typeof(Token),
-                typeof(Consent),
-            };
+        {
+            typeof(Token),
+            typeof(Consent),
+        };
 
         private readonly List<Type> _configurationServicesEntities = new List<Type>
-            {
-                typeof(Client),
-                typeof(ClientClaim),
-                typeof(ClientCorsOrigin),
-                typeof(ClientCustomGrantType),
-                typeof(ClientIdPRestriction),
-                typeof(ClientPostLogoutRedirectUri),
-                typeof(ClientRedirectUri),
-                typeof(ClientScope),
-                typeof(ClientSecret),
-                typeof(Scope),
-                typeof(ScopeClaim),
-                typeof(ScopeSecret)
-            };
+        {
+            typeof(Client),
+            typeof(ClientClaim),
+            typeof(ClientCorsOrigin),
+            typeof(ClientCustomGrantType),
+            typeof(ClientIdPRestriction),
+            typeof(ClientPostLogoutRedirectUri),
+            typeof(ClientRedirectUri),
+            typeof(ClientScope),
+            typeof(ClientSecret),
+            typeof(Scope),
+            typeof(ScopeClaim),
+            typeof(ScopeSecret)
+        };
 
         [Fact]
         public void MappingOperationalServiceEntities()
         {
             var mappings = MappingHelper.GetNhibernateServicesMappings(true, false);
-            var b = mappings.BuildMappings();
+            _ = mappings.BuildMappings();
 
             foreach (var operationalServicesEntity in _operationalServicesEntities)
             {
-
-                var map = mappings.FindMapping(operationalServicesEntity);
-
-                Assert.NotNull(map);
+                mappings.FindMapping(operationalServicesEntity).Should().NotBeNull();
             }
         }
 
@@ -83,13 +72,11 @@ namespace Core.Nhibernate.Tests
         public void MappingConfigurationServiceEntities()
         {
             var mappings = MappingHelper.GetNhibernateServicesMappings(false, true);
-            var b = mappings.BuildMappings();
+            _ = mappings.BuildMappings();
 
             foreach (var configurationServicesEntity in _configurationServicesEntities)
             {
-                var map = mappings.FindMapping(configurationServicesEntity);
-
-                Assert.NotNull(map);
+                mappings.FindMapping(configurationServicesEntity).Should().NotBeNull();
             }
         }
     }
